@@ -1,8 +1,12 @@
-🚀 Running the Project
+# 🚀 Running the Project
 
 Refer to overall and semester documentation in the GitHub Wiki.
 
-📦 Install the Repository
+---
+
+## 📦 Install the Repository
+
+```bash
 git clone https://github.com/your-username/NuLookUp.git
 cd NuLookUp
 npm install
@@ -48,9 +52,6 @@ http://localhost:5173
 🧪 Prisma Studio (Database Viewer)
 cd backend
 npx prisma studio
-
-Opens a visual database editor in your browser.
-
 🧩 Run Full Project (2 Terminals)
 Terminal 1 — Backend
 cd backend
@@ -83,7 +84,7 @@ SQLite is used for lightweight local development (no setup required)
 Prisma handles all database queries and migrations
 Backend serves API endpoints for the frontend
 Both frontend and backend must run simultaneously
-Use Prisma Studio to debug or inspect data easily
+Use Prisma Studio to inspect database visually
 🚀 Summary
 
 NuLookUp allows users to:
