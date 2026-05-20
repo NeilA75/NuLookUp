@@ -2,7 +2,7 @@
 name: Feature Needed
 about: Features needed to be implemented
 title: ''
-labels: enhancement
+labels: enhancement, Feature Needed
 assignees: ''
 
 ---
