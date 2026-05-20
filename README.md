@@ -22,7 +22,7 @@ The goal of NuLookUp is to provide a simple, centralized way to understand how a
 
 ## 📦 Getting Started
 
-Follow these steps to run the project locally.
+Follow the steps below to set up the project locally.
 
 ---
 
@@ -49,8 +49,8 @@ npx prisma migrate dev --name init
 This will:
 
 Create and configure the SQLite database
-Generate Prisma client
-Apply database schema
+Generate Prisma Client
+Apply database schema migrations
 Start backend server
 npm run dev
 
@@ -90,17 +90,20 @@ NuLookUp/
 │
 └── README.md
 🧠 Notes
-SQLite is used for simple local development (no external DB required)
+SQLite is used for simple local development (no external database required)
 Prisma handles database queries and migrations
-Backend provides API endpoints used by the frontend
-Make sure both frontend and backend servers are running
+Backend serves API endpoints consumed by the frontend
+Make sure both frontend and backend servers are running at the same time
 🚀 Running the Full Project
 
-Run both servers in separate terminals:
+Open two terminals:
 
-Backend
+Terminal 1 — Backend
 cd backend
 npm run dev
-Frontend
+Terminal 2 — Frontend
 cd frontend
 npm run dev
+📌 Summary
+
+NuLookUp combines market data, trend visualization, and news aggregation into one simple platform to help users understand value changes over time.
