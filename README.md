@@ -1,79 +1,63 @@
-# 🚀 NuLookUp
+🚀 Running the Project
 
-NuLookUp is a full-stack web application that allows users to search for items of value and analyze their market behavior over time.
+Refer to overall and semester documentation in the GitHub Wiki.
 
-Users can view:
-- 📈 Historical price trendlines  
-- 💰 Current average market value  
-- 📰 Related news articles and updates  
-
-The goal of NuLookUp is to provide a simple, centralized way to understand how an item’s value is changing in real time.
-
----
-
-## 🧰 Tech Stack
-
-- **Frontend:** React (TypeScript)
-- **Backend:** Node.js (TypeScript)
-- **ORM:** Prisma
-- **Database:** SQLite
-
----
-
-## 📦 Getting Started
-
-Follow the steps below to set up the project locally.
-
----
-
-## 📁 1. Clone the Repository
-
-```bash
+📦 Install the Repository
 git clone https://github.com/your-username/NuLookUp.git
 cd NuLookUp
-⚙️ 2. Backend Setup
-Go to backend folder
-cd backend
-Install dependencies
 npm install
-Create environment variables
+⚙️ Backend Setup
+📁 Go to backend directory
+cd backend
+📦 Install backend dependencies
+npm install
+🔐 Set up environment variables
 
 Create a .env file inside backend/:
 
 DATABASE_URL="file:./dev.db"
 PORT=5000
-Setup Prisma
+
+Or copy from example (if available):
+
+cp .env.example .env
+🧠 Prisma Setup
 npx prisma generate
 npx prisma migrate dev --name init
-
-This will:
-
-Create and configure the SQLite database
-Generate Prisma Client
-Apply database schema migrations
-Start backend server
+What this does:
+Creates and configures SQLite database
+Generates Prisma client
+Applies database schema migrations
+▶️ Run Backend Server
 npm run dev
 
 Backend will run at:
 
 http://localhost:5000
-💻 3. Frontend Setup
-Go to frontend folder
+💻 Frontend Setup
+📁 Go to frontend directory
 cd ../frontend
-Install dependencies
+📦 Install frontend dependencies
 npm install
-Start development server
+▶️ Run Frontend Server
 npm run dev
 
 Frontend will run at:
 
 http://localhost:5173
-🧪 4. Prisma Studio (Optional)
-
-View your database visually:
-
+🧪 Prisma Studio (Database Viewer)
 cd backend
 npx prisma studio
+
+Opens a visual database editor in your browser.
+
+🧩 Run Full Project (2 Terminals)
+Terminal 1 — Backend
+cd backend
+npm run dev
+Terminal 2 — Frontend
+cd frontend
+npm run dev
 📁 Project Structure
 NuLookUp/
 │
@@ -89,21 +73,22 @@ NuLookUp/
 │   └── package.json
 │
 └── README.md
+🧰 Tech Stack
+⚛️ React (TypeScript) — Frontend
+🟦 Node.js (TypeScript) — Backend
+🧬 Prisma — ORM
+🗄️ SQLite — Database
 🧠 Notes
-SQLite is used for simple local development (no external database required)
-Prisma handles database queries and migrations
-Backend serves API endpoints consumed by the frontend
-Make sure both frontend and backend servers are running at the same time
-🚀 Running the Full Project
+SQLite is used for lightweight local development (no setup required)
+Prisma handles all database queries and migrations
+Backend serves API endpoints for the frontend
+Both frontend and backend must run simultaneously
+Use Prisma Studio to debug or inspect data easily
+🚀 Summary
 
-Open two terminals:
+NuLookUp allows users to:
 
-Terminal 1 — Backend
-cd backend
-npm run dev
-Terminal 2 — Frontend
-cd frontend
-npm run dev
-📌 Summary
-
-NuLookUp combines market data, trend visualization, and news aggregation into one simple platform to help users understand value changes over time.
+Search items of value
+View price trends over time
+Analyze current market value
+Read related news articles
