@@ -1,7 +1,10 @@
 ---
 name: Feature Needed
-description: A feature to be added during the semester
-labels: ["enhancement"]
+about: Features needed to be implemented
+title: ''
+labels: enhancement
+assignees: ''
+
 ---
 
 ## Feature Description

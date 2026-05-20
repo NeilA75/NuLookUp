@@ -1,7 +1,10 @@
 ---
 name: Task
-description: Tasks to be complete
-labels: ["task"]
+about: Things to do
+title: ''
+labels: ''
+assignees: ''
+
 ---
 
 ## Task Description

@@ -1,7 +1,10 @@
 ---
 name: Bug Fix
-description: Report a bug with functionality
-labels: ["bug"]
+about: Bug issues / problems
+title: ''
+labels: bug
+assignees: ''
+
 ---
 
 ## Description
