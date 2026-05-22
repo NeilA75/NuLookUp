@@ -1,123 +1,203 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useNavigate } from 'react-router-dom'
+import { useRef, useEffect } from 'react'
 
-function App() {
-  const [count, setCount] = useState(0)
+function DotGrid() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    let animId: number
+
+    const resize = () => {
+      canvas.width = canvas.offsetWidth
+      canvas.height = canvas.offsetHeight
+    }
+
+    resize()
+    window.addEventListener('resize', resize)
+
+    const spacing = 32
+    const dots: { x: number; y: number; speed: number }[] = []
+
+    for (let x = 0; x < 2000; x += spacing) {
+      for (let y = 0; y < 2000; y += spacing) {
+        dots.push({
+          x,
+          y,
+          speed: 0.003 + Math.random() * 0.005,
+        })
+      }
+    }
+
+    let t = 0
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      t++
+
+      dots.forEach((d) => {
+        const o =
+          0.06 +
+          0.1 * Math.sin(t * d.speed + d.x * 0.02 + d.y * 0.01)
+
+        ctx.beginPath()
+        ctx.arc(d.x, d.y, 1.2, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(56,189,248,${o})`
+        ctx.fill()
+      })
+
+      animId = requestAnimationFrame(draw)
+    }
+
+    draw()
+
+    return () => {
+      cancelAnimationFrame(animId)
+      window.removeEventListener('resize', resize)
+    }
+  }, [])
 
   return (
-    <>
-      <section id="center">
-        
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    <canvas className="fixed inset-0 w-full h-full z-0 pointer-events-none" ref={canvasRef} />
   )
 }
 
-export default App
+export default function App() {
+  const navigate = useNavigate()
+
+  return (
+    <div className="min-h-screen bg-[#060d1a] relative overflow-hidden font-sans">
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap');
+      `}</style>
+
+      <DotGrid />
+
+      {/* ORBS */}
+      <div
+        className="fixed -top-28 -left-24 w-[500px] h-[500px] pointer-events-none z-0"
+        style={{
+          background:
+            'radial-gradient(circle, rgba(56,189,248,0.08) 0%, transparent 65%)',
+        }}
+      />
+
+      <div
+        className="fixed -bottom-20 -right-20 w-[400px] h-[400px] pointer-events-none z-0"
+        style={{
+          background:
+            'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 65%)',
+        }}
+      />
+
+      {/* SCANLINES */}
+      <div
+        className="fixed inset-0 z-[1] pointer-events-none"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)',
+        }}
+      />
+
+      {/* CONTENT */}
+      <div className="relative z-[2] flex flex-col items-center justify-center min-h-screen text-center px-6">
+
+        {/* ICON */}
+        <div
+          className="w-32 h-32 rounded-full flex items-center justify-center mb-8"
+          style={{
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.25)',
+            boxShadow: '0 0 25px rgba(239,68,68,0.15)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <svg
+            width="60"
+            height="60"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M3 17L9 11L13 15L21 7"
+              stroke="#ef4444"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M21 7V12"
+              stroke="#ef4444"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            />
+            <path
+              d="M21 7H16"
+              stroke="#ef4444"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+
+        {/* BADGE */}
+        <span className="text-[0.7rem] tracking-[0.25em] uppercase text-sky-400 border border-sky-400/30 px-4 py-1 rounded-full inline-block mb-6 bg-sky-400/5"
+          style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+          Universal Lookup
+        </span>
+
+        {/* TITLE */}
+        <h1
+          className="font-extrabold tracking-tighter leading-none mb-4"
+          style={{
+            fontSize: 'clamp(3rem, 10vw, 6rem)',
+            fontFamily: "'IBM Plex Mono', monospace",
+            background:
+              'linear-gradient(135deg, #e2e8f0 0%, #38bdf8 50%, #818cf8 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          NuLookUp
+        </h1>
+
+        {/* SUBTITLE */}
+        <p
+          className="text-slate-500 text-base max-w-md leading-relaxed mb-10"
+          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+        >
+          Search anything — stocks, crypto, cars, clothing, currencies, and more.
+        </p>
+
+        {/* BUTTON */}
+        <button
+          onClick={() => navigate('/Home')}
+          className="px-10 py-4 rounded-xl text-white font-bold text-base cursor-pointer hover:opacity-90 transition-opacity"
+          style={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+            boxShadow: '0 0 24px rgba(56,189,248,0.2)',
+          }}
+        >
+          Get Started →
+        </button>
+
+        {/* FOOTER */}
+        <p
+          className="absolute bottom-8 text-slate-600 text-xs tracking-widest uppercase"
+          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+        >
+          Powered by NuLookUp
+        </p>
+
+      </div>
+    </div>
+  )
+}

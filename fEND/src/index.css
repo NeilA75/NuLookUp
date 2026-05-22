@@ -3,3 +3,12 @@
 body {
   margin: 0;
 }
+@keyframes wave {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-25%); }
+  100% { transform: translateX(0); }
+}
+
+.animate-wave {
+  animation: wave 10s ease-in-out infinite;
+}
