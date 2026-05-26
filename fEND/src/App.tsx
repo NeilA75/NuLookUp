@@ -110,7 +110,9 @@ export default function App({ settings }: { settings: Settings }) {
           style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
           Powered by NuLookUp
         </p>
+        
       </div>
+      
     </div>
   )
 }
