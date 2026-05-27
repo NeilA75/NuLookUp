@@ -6,7 +6,8 @@ import './index.css'
 import App from './App'
 import Home from './Home'
 import About from './About'
-import { Contact } from 'lucide-react'
+import Contact from './Contact'
+
 
 export interface Settings {
   darkMode: boolean
@@ -43,7 +44,7 @@ function Root() {
         <Route path="/" element={<App settings={settings} />} />
         <Route path="/Home" element={<Home settings={settings} />} />
         <Route path = "/About" element={<About settings={settings} />} />
-        <Route path = " /Contact" element={<Contact settings={settings} />} />
+        <Route path = "/Contact" element={<Contact settings={settings} />} />
       </Routes>
     </BrowserRouter>
   )
