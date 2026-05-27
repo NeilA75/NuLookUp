@@ -6,7 +6,7 @@ type SettingProps = {
 
 export default function Setting({ onClick }: SettingProps) {
   return (
-    <div className="fixed top-6 right-6 z-40">
+    <div className="fixed top-6 right-6 z-[100]">
       <button
         onClick={onClick}
         className="

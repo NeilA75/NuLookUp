@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from 'react'
 import SettingsModal from '../components/SettingsModal'
 import Setting from '../components/Setting'
 import type { Settings } from './main'
+import NavBar from '../components/NavBar'
 
 const recommendations = [
   { title: 'NVIDIA',        type: 'STOCK',     value: '$875.39', change: '+4.2%',  desc: 'AI chip leader driving next-gen compute' },
@@ -204,6 +205,7 @@ export default function Home({ settings }: { settings: Settings }) {
 
   return (
     <div className="min-h-screen bg-[#060d1a] relative overflow-hidden font-sans">
+      <NavBar />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap');
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }

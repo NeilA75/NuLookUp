@@ -3,6 +3,7 @@ import { useRef, useEffect, useState } from 'react'
 import Setting from '../components/Setting'
 import SettingsModal from '../components/SettingsModal'
 import type { Settings } from './main'
+import NavBar from "../components/NavBar"
 
 function DotGrid() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -64,6 +65,7 @@ export default function App({ settings }: { settings: Settings }) {
         style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)' }} />
 
       <div className="relative z-[2] flex flex-col items-center justify-center min-h-screen text-center px-6">
+        
         <Setting onClick={() => setShowModal(true)} />
 
         {showModal && (
@@ -75,6 +77,7 @@ export default function App({ settings }: { settings: Settings }) {
             notifications={notifications} setNotifications={setNotifications}
           />
         )}
+        <NavBar />
 
         <div className="w-32 h-32 rounded-full flex items-center justify-center mb-8"
           style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', boxShadow: '0 0 25px rgba(239,68,68,0.15)', backdropFilter: 'blur(8px)' }}>
