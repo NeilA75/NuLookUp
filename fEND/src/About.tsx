@@ -13,6 +13,7 @@ import { useState } from 'react'                  // State hook for managing UI
 import SettingsModal from '../components/SettingsModal'
 import Setting from '../components/Setting'
 import type { Settings } from './main'            // TypeScript: import the Settings type (like a struct/interface)
+import NavBar from '../components/NavBar'
 
 // ─────────────────────────────────────────────
 // DATA — defined outside the component so it's
@@ -64,6 +65,7 @@ function TeamCard({
     // motion.div = a regular <div> that can animate.
     // initial = starting state, animate = end state.
     // delay: index * 0.1 staggers each card (0s, 0.1s, 0.2s...)
+    
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
@@ -143,10 +145,11 @@ export default function About({ settings }: { settings: Settings }) {
   return (
     // Root container — matches the dark bg used in App.tsx and Home.tsx
     <div className="min-h-screen bg-[#060d1a] relative overflow-hidden font-sans">
+      <NavBar />
 
       {/* Google Font import — same font as the rest of the app */}
       <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap');`}</style>
-
+      
       <Setting onClick={() => setShowModal(true)} />
 
       {showModal && (

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import Setting from '../components/Setting'
 import SettingsModal from '../components/SettingsModal'
 import type { Settings } from './main'
+import NavBar from '../components/NavBar'
 
 function DotGrid() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -91,6 +92,7 @@ export default function Contact({ settings }: { settings: Settings }) {
 
   return (
     <div className="min-h-screen bg-[#060d1a] relative overflow-hidden">
+        <NavBar />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap');
       `}</style>
