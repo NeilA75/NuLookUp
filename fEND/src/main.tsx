@@ -5,6 +5,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App'
 import Home from './Home'
+import About from './About'
+import { Contact } from 'lucide-react'
 
 export interface Settings {
   darkMode: boolean
@@ -40,6 +42,8 @@ function Root() {
       <Routes>
         <Route path="/" element={<App settings={settings} />} />
         <Route path="/Home" element={<Home settings={settings} />} />
+        <Route path = "/About" element={<About settings={settings} />} />
+        <Route path = " /Contact" element={<Contact settings={settings} />} />
       </Routes>
     </BrowserRouter>
   )
