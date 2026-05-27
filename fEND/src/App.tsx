@@ -106,6 +106,13 @@ export default function App({ settings }: { settings: Settings }) {
           Get Started →
         </button>
 
+        <button onClick={() => navigate('/About')}
+          className="mt-4 px-6 py-2 rounded-lg text-sm text-slate-400 hover:text-slate-200 transition-colors border border-slate-700/50"
+          style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+          About Us
+        </button>
+  
+
         <p className="absolute bottom-8 text-slate-600 text-xs tracking-widest uppercase"
           style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
           Powered by NuLookUp
