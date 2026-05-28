@@ -8,12 +8,9 @@ import Home from './Home'
 import About from './About'
 import Contact from './Contact'
 
-
 export interface Settings {
   darkMode: boolean
   setDarkMode: Dispatch<SetStateAction<boolean>>
-  animationMode: boolean
-  setAnimationMode: Dispatch<SetStateAction<boolean>>
   motionMode: boolean
   setMotionMode: Dispatch<SetStateAction<boolean>>
   notifications: boolean
@@ -21,19 +18,27 @@ export interface Settings {
 }
 
 function Root() {
-  const [darkMode, setDarkMode] = useState(() => JSON.parse(localStorage.getItem('darkMode') || 'false'))
-  const [animationMode, setAnimationMode] = useState(() => JSON.parse(localStorage.getItem('animationMode') || 'false'))
-  const [motionMode, setMotionMode] = useState(() => JSON.parse(localStorage.getItem('motionMode') || 'false'))
-  const [notifications, setNotifications] = useState(() => JSON.parse(localStorage.getItem('notifications') || 'false'))
+  const [darkMode, setDarkMode] = useState(() =>
+    JSON.parse(localStorage.getItem('darkMode') || 'false')
+  )
+  const [motionMode, setMotionMode] = useState(() =>
+    JSON.parse(localStorage.getItem('motionMode') || 'false')
+  )
+  const [notifications, setNotifications] = useState(() => {
+    // If the browser has already granted permission, honour it on load.
+    // If permission was revoked in browser settings since last visit, reset to false.
+    const saved = JSON.parse(localStorage.getItem('notifications') || 'false')
+    const browserGranted =
+      typeof Notification !== 'undefined' && Notification.permission === 'granted'
+    return saved && browserGranted
+  })
 
   useEffect(() => { localStorage.setItem('darkMode', JSON.stringify(darkMode)) }, [darkMode])
-  useEffect(() => { localStorage.setItem('animationMode', JSON.stringify(animationMode)) }, [animationMode])
   useEffect(() => { localStorage.setItem('motionMode', JSON.stringify(motionMode)) }, [motionMode])
   useEffect(() => { localStorage.setItem('notifications', JSON.stringify(notifications)) }, [notifications])
 
   const settings: Settings = {
     darkMode, setDarkMode,
-    animationMode, setAnimationMode,
     motionMode, setMotionMode,
     notifications, setNotifications,
   }
@@ -41,10 +46,10 @@ function Root() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App settings={settings} />} />
-        <Route path="/Home" element={<Home settings={settings} />} />
-        <Route path = "/About" element={<About settings={settings} />} />
-        <Route path = "/Contact" element={<Contact settings={settings} />} />
+        <Route path="/"        element={<App     settings={settings} />} />
+        <Route path="/Home"    element={<Home    settings={settings} />} />
+        <Route path="/About"   element={<About   settings={settings} />} />
+        <Route path="/Contact" element={<Contact settings={settings} />} />
       </Routes>
     </BrowserRouter>
   )

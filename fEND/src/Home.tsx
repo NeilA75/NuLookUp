@@ -32,7 +32,6 @@ const COLOR_PALETTES = [
   { bg: 'rgba(251,113,133,0.15)', color: '#fb7185', border: 'rgba(251,113,133,0.3)' },
 ]
 
-// Light mode versions of palettes (darker tints for readability on white)
 const COLOR_PALETTES_LIGHT = [
   { bg: 'rgba(56,189,248,0.12)',  color: '#0284c7', border: 'rgba(2,132,199,0.3)'   },
   { bg: 'rgba(251,191,36,0.15)',  color: '#b45309', border: 'rgba(180,83,9,0.3)'    },
@@ -154,7 +153,6 @@ function DotGrid({ darkMode }: { darkMode: boolean }) {
         const o = 0.06 + 0.1 * Math.sin(t * d.speed + d.x * 0.02 + d.y * 0.01)
         ctx.beginPath()
         ctx.arc(d.x, d.y, 1.2, 0, Math.PI * 2)
-        // In light mode use a darker dot color so it's visible on white
         ctx.fillStyle = darkMode
           ? `rgba(14,165,233,${o})`
           : `rgba(56,189,248,${o})`
@@ -169,17 +167,32 @@ function DotGrid({ darkMode }: { darkMode: boolean }) {
   return <canvas ref={canvasRef} className="fixed inset-0 w-full h-full z-0 pointer-events-none" />
 }
 
-function Card({ item, index, darkMode }: { item: typeof recommendations[0]; index: number; darkMode: boolean }) {
+function Card({
+  item,
+  index,
+  darkMode,
+  motionMode,
+}: {
+  item: typeof recommendations[0]
+  index: number
+  darkMode: boolean
+  motionMode: boolean
+}) {
   const ref = useRef(null)
   const isInView = useInView(ref, { margin: '-80px', amount: 0.3 })
   const isPositive = item.change.startsWith('+')
   const typeStyle = getTypeStyle(item.type, darkMode)
 
+  // When motion is disabled, cards are always fully visible with no animation
+  const animateProps = motionMode
+    ? { opacity: 1, y: 0, scale: 1 }
+    : { opacity: isInView ? 1 : 0, y: isInView ? 0 : 40, scale: isInView ? 1 : 0.97 }
+
   return (
     <motion.div
       ref={ref}
-      animate={{ opacity: isInView ? 1 : 0, y: isInView ? 0 : 40, scale: isInView ? 1 : 0.97 }}
-      transition={{ duration: 0.45, delay: index * 0.06 }}
+      animate={animateProps}
+      transition={motionMode ? { duration: 0 } : { duration: 0.45, delay: index * 0.06 }}
       className="relative overflow-hidden rounded-2xl p-5 cursor-pointer backdrop-blur-md"
       style={{
         background: darkMode
@@ -188,11 +201,10 @@ function Card({ item, index, darkMode }: { item: typeof recommendations[0]; inde
         border: darkMode
           ? '1px solid rgba(14,165,233,0.2)'
           : '1px solid rgba(56,189,248,0.15)',
-        boxShadow: darkMode
-          ? '0 2px 12px rgba(0,0,0,0.06)'
-          : 'none',
+        boxShadow: darkMode ? '0 2px 12px rgba(0,0,0,0.06)' : 'none',
       }}
-      whileHover={{
+      // No hover animation when motion is disabled
+      whileHover={motionMode ? undefined : {
         borderColor: typeStyle.border,
         boxShadow: `0 0 30px ${typeStyle.bg}, 0 8px 32px ${darkMode ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.4)'}`,
         y: -2,
@@ -220,10 +232,7 @@ function Card({ item, index, darkMode }: { item: typeof recommendations[0]; inde
           >
             {item.title}
           </h3>
-          <p
-            className="text-xs mt-1"
-            style={{ color: darkMode ? '#64748b' : '#64748b' }}
-          >
+          <p className="text-xs mt-1" style={{ color: '#64748b' }}>
             {item.desc}
           </p>
         </div>
@@ -262,16 +271,22 @@ function Card({ item, index, darkMode }: { item: typeof recommendations[0]; inde
 
 export default function Home({ settings }: { settings: Settings }) {
   const navigate = useNavigate()
-  const [phase, setPhase] = useState<'graph' | 'fading' | 'done'>('graph')
+  // When motion is disabled, skip the intro entirely by starting at 'done'
+  const { darkMode, setDarkMode, motionMode, setMotionMode, notifications, setNotifications } = settings
+  const [phase, setPhase] = useState<'graph' | 'fading' | 'done'>(motionMode ? 'done' : 'graph')
   const [showModal, setShowModal] = useState(false)
 
-  const { darkMode, setDarkMode, animationMode, setAnimationMode, motionMode, setMotionMode, notifications, setNotifications } = settings
-
   useEffect(() => {
+    // If motion is disabled, jump straight to done and skip the intro graph
+    if (motionMode) {
+      setPhase('done')
+      return
+    }
+    setPhase('graph')
     const t1 = setTimeout(() => setPhase('fading'), 2200)
     const t2 = setTimeout(() => setPhase('done'), 3000)
     return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
+  }, [motionMode])
 
   return (
     <div
@@ -292,13 +307,12 @@ export default function Home({ settings }: { settings: Settings }) {
         <SettingsModal
           onClose={() => setShowModal(false)}
           darkMode={darkMode} setDarkMode={setDarkMode}
-          animationMode={animationMode} setAnimationMode={setAnimationMode}
           motionMode={motionMode} setMotionMode={setMotionMode}
           notifications={notifications} setNotifications={setNotifications}
         />
       )}
 
-      {/* Ambient glows — swap tint for light mode */}
+      {/* Ambient glows */}
       <div
         className="fixed -top-28 -left-24 w-[500px] h-[500px] pointer-events-none z-0"
         style={{
@@ -324,9 +338,9 @@ export default function Home({ settings }: { settings: Settings }) {
         }}
       />
 
-      {/* Intro animation overlay */}
+      {/* Intro animation overlay — skipped entirely when motion is disabled */}
       <AnimatePresence>
-        {phase !== 'done' && (
+        {phase !== 'done' && !motionMode && (
           <motion.div
             initial={{ opacity: 1 }}
             animate={{ opacity: phase === 'fading' ? 0 : 1 }}
@@ -351,23 +365,24 @@ export default function Home({ settings }: { settings: Settings }) {
 
       {/* Main content */}
       <motion.div
-        initial={{ opacity: 0 }}
+        // When motion is disabled, no fade-in — content is immediately visible
+        initial={{ opacity: motionMode ? 1 : 0 }}
         animate={{ opacity: phase === 'done' ? 1 : 0 }}
-        transition={{ duration: 0.7 }}
+        transition={motionMode ? { duration: 0 } : { duration: 0.7 }}
         className="relative z-[2]"
       >
         <div className="flex flex-col items-center text-center px-6 pt-20 pb-12">
           <motion.div
-            initial={{ opacity: 0, y: -16 }}
+            initial={{ opacity: motionMode ? 1 : 0, y: motionMode ? 0 : -16 }}
             animate={{ opacity: phase === 'done' ? 1 : 0, y: phase === 'done' ? 0 : -16 }}
-            transition={{ duration: 0.6 }}
+            transition={motionMode ? { duration: 0 } : { duration: 0.6 }}
           >
             {/* Badge */}
             <span
               className="text-[0.7rem] tracking-[0.25em] uppercase border px-4 py-1 rounded-full inline-block mb-6 transition-colors duration-300"
               style={{
                 fontFamily: "'IBM Plex Mono', monospace",
-                color: darkMode ? 'from-black via-zinc-400 to-slate-300' : '#38bdf8',
+                color: darkMode ? '#0284c7' : '#38bdf8',
                 borderColor: darkMode ? 'rgba(2,132,199,0.35)' : 'rgba(56,189,248,0.30)',
                 background: darkMode ? 'rgba(2,132,199,0.06)' : 'rgba(56,189,248,0.05)',
               }}
@@ -376,29 +391,19 @@ export default function Home({ settings }: { settings: Settings }) {
             </span>
 
             {/* Title */}
-        <h1
-            className={`
-              block
-              font-extrabold
-              tracking-tighter
-              leading-none
-              mb-4
-              text-transparent
-              bg-clip-text
-              bg-gradient-to-br
-              ${
-                darkMode
-                  ? 'from-black via-zinc-400 to-slate-300'
-                  : 'from-slate-200 via-sky-400 to-indigo-400'
-              }
-            `}
-            style={{
-              fontSize: 'clamp(3rem, 8vw, 5rem)',
-              fontFamily: "'IBM Plex Mono', monospace",
-            }}
-          >
-            NuLookup
-          </h1>
+            <h1
+              className={`
+                block font-extrabold tracking-tighter leading-none mb-4
+                text-transparent bg-clip-text bg-gradient-to-br
+                ${darkMode ? 'from-black via-zinc-400 to-slate-300' : 'from-slate-200 via-sky-400 to-indigo-400'}
+              `}
+              style={{
+                fontSize: 'clamp(3rem, 8vw, 5rem)',
+                fontFamily: "'IBM Plex Mono', monospace",
+              }}
+            >
+              NuLookup
+            </h1>
 
             {/* Subtitle */}
             <p
@@ -411,9 +416,9 @@ export default function Home({ settings }: { settings: Settings }) {
 
           {/* Search bar */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: motionMode ? 1 : 0, y: motionMode ? 0 : 16 }}
             animate={{ opacity: phase === 'done' ? 1 : 0, y: phase === 'done' ? 0 : 16 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
+            transition={motionMode ? { duration: 0 } : { duration: 0.6, delay: 0.15 }}
             className="flex gap-3 w-full max-w-[520px]"
           >
             <input
@@ -432,7 +437,7 @@ export default function Home({ settings }: { settings: Settings }) {
               className="px-6 py-3 rounded-xl text-white font-bold text-sm cursor-pointer border-none transition-all duration-300"
               style={{
                 fontFamily: "'IBM Plex Mono', monospace",
-                 background: darkMode
+                background: darkMode
                   ? 'linear-gradient(135deg, #000000, #71717a, #cbd5e1)'
                   : 'linear-gradient(135deg, #0ea5e9, #6366f1)',
                 boxShadow: darkMode
@@ -464,16 +469,13 @@ export default function Home({ settings }: { settings: Settings }) {
           <div className="flex items-center gap-3 mb-6">
             <span
               className="w-2 h-2 rounded-full inline-block animate-pulse-dot"
-              style={{
-                background: '#10b981',
-                boxShadow: '0 0 8px #10b981',
-              }}
+              style={{ background: '#10b981', boxShadow: '0 0 8px #10b981' }}
             />
             <h2
               className="text-[0.85rem] tracking-[0.15em] uppercase transition-colors duration-300"
               style={{
                 fontFamily: "'IBM Plex Mono', monospace",
-                color: darkMode ? '#64748b' : '#64748b',
+                color: '#64748b',
               }}
             >
               Recommended
@@ -481,7 +483,7 @@ export default function Home({ settings }: { settings: Settings }) {
           </div>
           <div className="flex flex-col gap-3.5">
             {recommendations.map((item, i) => (
-              <Card key={i} item={item} index={i} darkMode={darkMode} />
+              <Card key={i} item={item} index={i} darkMode={darkMode} motionMode={motionMode} />
             ))}
           </div>
         </div>
