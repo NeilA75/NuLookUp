@@ -80,8 +80,6 @@ export default function Contact({ settings }: { settings: Settings }) {
   const {
     darkMode,
     setDarkMode,
-    animationMode,
-    setAnimationMode,
     motionMode,
     setMotionMode,
     notifications,
@@ -107,8 +105,6 @@ export default function Contact({ settings }: { settings: Settings }) {
           onClose={() => setShowModal(false)}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
-          animationMode={animationMode}
-          setAnimationMode={setAnimationMode}
           motionMode={motionMode}
           setMotionMode={setMotionMode}
           notifications={notifications}

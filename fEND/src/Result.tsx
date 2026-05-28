@@ -350,8 +350,6 @@ export default function Result({ settings }: { settings: Settings }) {
   const [showModal, setShowModal] = useState(false)
 
   const {
-    animationMode,
-    setAnimationMode,
     motionMode,
     setMotionMode,
     notifications,
@@ -399,7 +397,6 @@ export default function Result({ settings }: { settings: Settings }) {
         <SettingsModal
           onClose={() => setShowModal(false)}
           darkMode={settings.darkMode} setDarkMode={settings.setDarkMode}
-          animationMode={animationMode} setAnimationMode={setAnimationMode}
           motionMode={motionMode} setMotionMode={setMotionMode}
           notifications={notifications} setNotifications={setNotifications}
         />

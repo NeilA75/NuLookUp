@@ -13,8 +13,6 @@ import Result from './Result'
 export interface Settings {
   darkMode: boolean
   setDarkMode: Dispatch<SetStateAction<boolean>>
-  animationMode: boolean
-  setAnimationMode: Dispatch<SetStateAction<boolean>>
   motionMode: boolean
   setMotionMode: Dispatch<SetStateAction<boolean>>
   notifications: boolean
@@ -23,18 +21,15 @@ export interface Settings {
 
 function Root() {
   const [darkMode, setDarkMode] = useState(() => JSON.parse(localStorage.getItem('darkMode') || 'false'))
-  const [animationMode, setAnimationMode] = useState(() => JSON.parse(localStorage.getItem('animationMode') || 'false'))
   const [motionMode, setMotionMode] = useState(() => JSON.parse(localStorage.getItem('motionMode') || 'false'))
   const [notifications, setNotifications] = useState(() => JSON.parse(localStorage.getItem('notifications') || 'false'))
 
   useEffect(() => { localStorage.setItem('darkMode', JSON.stringify(darkMode)) }, [darkMode])
-  useEffect(() => { localStorage.setItem('animationMode', JSON.stringify(animationMode)) }, [animationMode])
   useEffect(() => { localStorage.setItem('motionMode', JSON.stringify(motionMode)) }, [motionMode])
   useEffect(() => { localStorage.setItem('notifications', JSON.stringify(notifications)) }, [notifications])
 
   const settings: Settings = {
     darkMode, setDarkMode,
-    animationMode, setAnimationMode,
     motionMode, setMotionMode,
     notifications, setNotifications,
   }

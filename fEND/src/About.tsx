@@ -140,7 +140,7 @@ export default function About({ settings }: { settings: Settings }) {
   const [showModal, setShowModal] = useState(false)
 
   // Extract settings properties for the modal
-  const { darkMode, setDarkMode, animationMode, setAnimationMode, motionMode, setMotionMode, notifications, setNotifications } = settings
+  const { darkMode, setDarkMode, motionMode, setMotionMode, notifications, setNotifications } = settings
 
   return (
     // Root container — matches the dark bg used in App.tsx and Home.tsx
@@ -156,7 +156,6 @@ export default function About({ settings }: { settings: Settings }) {
         <SettingsModal
           onClose={() => setShowModal(false)}
           darkMode={darkMode} setDarkMode={setDarkMode}
-          animationMode={animationMode} setAnimationMode={setAnimationMode}
           motionMode={motionMode} setMotionMode={setMotionMode}
           notifications={notifications} setNotifications={setNotifications}
         />

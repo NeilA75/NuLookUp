@@ -1,20 +1,14 @@
-
-import type { Dispatch, SetStateAction } from 'react'
-
 type SettingsModalProps = {
   onClose: () => void
 
   darkMode: boolean
-  setDarkMode: Dispatch<SetStateAction<boolean>>
-
-  animationMode: boolean
-  setAnimationMode: Dispatch<SetStateAction<boolean>>
+  setDarkMode: React.Dispatch<React.SetStateAction<boolean>>
 
   motionMode: boolean
-  setMotionMode: Dispatch<SetStateAction<boolean>>
+  setMotionMode: React.Dispatch<React.SetStateAction<boolean>>
 
   notifications: boolean
-  setNotifications: Dispatch<SetStateAction<boolean>>
+  setNotifications: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export default function SettingsModal({
@@ -23,16 +17,43 @@ export default function SettingsModal({
   darkMode,
   setDarkMode,
 
-  animationMode,
-  setAnimationMode,
-
   motionMode,
   setMotionMode,
 
   notifications,
   setNotifications,
 }: SettingsModalProps) {
-  
+
+  console.log('SettingsModal mounted')
+
+  const handleNotificationsToggle = async () => {
+    console.log('toggle called')
+    if (!notifications) {
+      if (typeof Notification === 'undefined') {
+        console.log('Notifications not supported in this browser')
+        return
+      }
+      const permission = await Notification.requestPermission()
+      console.log('Permission result:', permission)
+      if (permission === 'granted') {
+        setNotifications(true)
+        console.log('Firing notification...')
+        new Notification('NuLookUp', {
+          body: 'Notifications are now enabled!',
+          icon: '/favicon.ico',
+        })
+      }
+    } else {
+      setNotifications(false)
+    }
+  }
+
+  function MotionClicked() {
+    setMotionMode(!motionMode)
+
+    
+  }
+
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
 
@@ -59,59 +80,45 @@ export default function SettingsModal({
             ✕
           </button>
         </div>
+
         <div className="flex flex-col gap-y-[20px]">
-        <div className='border border-amber-400 shadow-2xl width-[500px] h-[50px] rounded-2xl flex flex-row  '>
-          <label className='block text-white ml-5 mt-3'>
-            Toggle Dark/Light Mode
-          </label>
-          <input
-            className="ml-[195px]"
-            type="checkbox"
-            checked={darkMode}
-            onChange={() => setDarkMode(!darkMode)}
-          />
+
+          <div className="border border-amber-400 shadow-2xl width-[500px] h-[50px] rounded-2xl flex flex-row">
+            <label className="block text-white ml-5 mt-3">
+              Toggle Dark/Light Mode
+            </label>
+            <input
+              className="ml-[195px]"
+              type="checkbox"
+              checked={darkMode}
+              onChange={() => setDarkMode(!darkMode)}
+            />
+          </div>
+
+          <div className="border border-emerald-400 shadow-2xl width-[500px] h-[50px] rounded-2xl flex flex-row">
+            <button className="block text-white ml-5" onClick={()=> MotionClicked()}>
+              {motionMode
+                ? "Enable Motion Mode"
+                : "Disable Motion Mode"}
+            </button>
+            
+          </div>
+
+          <div className="border border-fuchsia-600 shadow-2xl width-[500px] h-[50px] rounded-2xl flex flex-row">
+            <label className="block text-white ml-5 mt-3">
+              Allow Notifications
+            </label>
+            <input
+              className="ml-[235px]"
+              type="checkbox"
+              checked={notifications}
+              onChange={handleNotificationsToggle}
+              onClick={handleNotificationsToggle}
+            />
+          </div>
 
         </div>
-        <div className='border border-blue-400 shadow-2xl width-[500px] h-[50px] rounded-2xl flex flex-row  '>
-          <label className='block text-white ml-5 mt-3'>
-            Toggle animation mode
-          </label>
-          <input
-            className="ml-[200px]"
-            type="checkbox"
-            checked={animationMode}
-            onChange={() => setAnimationMode(!animationMode)}
-          />
-
-        </div>
-        <div className='border border-emerald-400 shadow-2xl width-[500px] h-[50px] rounded-2xl flex flex-row  '>
-          <label className='block text-white ml-5 mt-3'>
-            Toggle motion mode 
-          </label>
-          <input
-            className="ml-[220px]"
-            type="checkbox"
-            checked={motionMode}
-            onChange={() => setMotionMode(!motionMode)}
-          />
-
-        </div>
-        <div className='border border-fuchsia-600 shadow-2xl width-[500px] h-[50px] rounded-2xl flex flex-row  '>
-          <label className='block text-white ml-5 mt-3'>
-            Allow Notifications 
-          </label>
-          <input
-            className="ml-[235px]"
-            type="checkbox"
-            checked={notifications}
-            onChange={() => setNotifications(!notifications)}
-          />
-
-        </div>
-        </div>
-        
       </div>
     </div>
   )
 }
-

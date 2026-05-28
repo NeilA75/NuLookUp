@@ -49,7 +49,7 @@ export default function App({ settings }: { settings: Settings }) {
   const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
 
-  const { darkMode, setDarkMode, animationMode, setAnimationMode, motionMode, setMotionMode, notifications, setNotifications } = settings
+  const { darkMode, setDarkMode, motionMode, setMotionMode, notifications, setNotifications } = settings
 
   return (
     <div className="min-h-screen bg-[#060d1a] relative overflow-hidden font-sans">
@@ -72,7 +72,6 @@ export default function App({ settings }: { settings: Settings }) {
           <SettingsModal
             onClose={() => setShowModal(false)}
             darkMode={darkMode} setDarkMode={setDarkMode}
-            animationMode={animationMode} setAnimationMode={setAnimationMode}
             motionMode={motionMode} setMotionMode={setMotionMode}
             notifications={notifications} setNotifications={setNotifications}
           />
