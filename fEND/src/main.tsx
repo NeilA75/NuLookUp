@@ -46,11 +46,11 @@ function Root() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/"        element={<App     settings={settings} />} />
-        <Route path="/Home"    element={<Home    settings={settings} />} />
-        <Route path="/About"   element={<About   settings={settings} />} />
-        <Route path="/Contact" element={<Contact settings={settings} />} />
-        <Route path="/Result"  element={<Result  settings={settings} />} />
+        <Route path="/" element={<App settings={settings} />} />
+        <Route path="/Home" element={<Home settings={settings} />} />
+        <Route path = "/About" element={<About settings={settings} />} />
+        <Route path = "/Contact" element={<Contact settings={settings} />} />
+        <Route path = "/Result" element={<Result settings={settings} />} />
       </Routes>
     </BrowserRouter>
   )

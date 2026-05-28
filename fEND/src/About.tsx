@@ -115,14 +115,8 @@ export default function About({ settings }: { settings: Settings }) {
   const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
 
-  const {
-    darkMode,
-    setDarkMode,
-    motionMode,
-    setMotionMode,
-    notifications,
-    setNotifications,
-  } = settings
+  // Extract settings properties for the modal
+  const { darkMode, setDarkMode, motionMode, setMotionMode, notifications, setNotifications } = settings
 
   return (
     <div

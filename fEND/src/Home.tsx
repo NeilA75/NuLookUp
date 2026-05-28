@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { motion, useInView, AnimatePresence } from 'framer-motion'
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, type FormEvent } from 'react'
 import SettingsModal from '../components/SettingsModal'
 import Setting from '../components/Setting'
 import type { Settings } from './main'
@@ -269,12 +269,30 @@ function Card({
   )
 }
 
+function titleCase(input: string) {
+  return input
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
 export default function Home({ settings }: { settings: Settings }) {
   const navigate = useNavigate()
   // When motion is disabled, skip the intro entirely by starting at 'done'
   const { darkMode, setDarkMode, motionMode, setMotionMode, notifications, setNotifications } = settings
   const [phase, setPhase] = useState<'graph' | 'fading' | 'done'>(motionMode ? 'done' : 'graph')
   const [showModal, setShowModal] = useState(false)
+  const [searchText, setSearchText] = useState('')
+
+  const { darkMode, setDarkMode, motionMode, setMotionMode, notifications, setNotifications } = settings
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const trimmed = searchText.trim()
+    if (!trimmed) return
+    navigate(`/Result?q=${encodeURIComponent(titleCase(trimmed))}`)
+  }
 
   useEffect(() => {
     // If motion is disabled, jump straight to done and skip the intro graph
@@ -421,32 +439,39 @@ export default function Home({ settings }: { settings: Settings }) {
             transition={motionMode ? { duration: 0 } : { duration: 0.6, delay: 0.15 }}
             className="flex gap-3 w-full max-w-[520px]"
           >
-            <input
-              className="flex-1 px-5 py-3 rounded-xl text-[0.95rem] outline-none transition-colors duration-300"
-              style={{
-                fontFamily: "'IBM Plex Mono', monospace",
-                background: darkMode ? 'rgba(241,245,249,0.9)' : 'rgba(15,23,42,0.8)',
-                color: darkMode ? '#0f172a' : '#e2e8f0',
-                border: darkMode
-                  ? '1px solid rgba(2,132,199,0.3)'
-                  : '1px solid rgba(56,189,248,0.25)',
-              }}
-              placeholder="Search anything..."
-            />
-            <button
-              className="px-6 py-3 rounded-xl text-white font-bold text-sm cursor-pointer border-none transition-all duration-300"
-              style={{
-                fontFamily: "'IBM Plex Mono', monospace",
-                background: darkMode
-                  ? 'linear-gradient(135deg, #000000, #71717a, #cbd5e1)'
-                  : 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-                boxShadow: darkMode
-                  ? '0 0 20px rgba(2,132,199,0.2)'
-                  : '0 0 20px rgba(56,189,248,0.25)',
-              }}
-            >
-              Search
-            </button>
+
+            <form onSubmit={handleSearch} className="flex gap-3 w-full">
+              <input
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                className="flex-1 px-5 py-3 rounded-xl text-[0.95rem] outline-none transition-colors duration-300"
+                style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  background: darkMode ? 'rgba(241,245,249,0.9)' : 'rgba(15,23,42,0.8)',
+                  color: darkMode ? '#0f172a' : '#e2e8f0',
+                  border: darkMode
+                    ? '1px solid rgba(2,132,199,0.3)'
+                    : '1px solid rgba(56,189,248,0.25)',
+                }}
+                placeholder="Search anything..."
+              />
+              <button
+                type="submit"
+                className="px-6 py-3 rounded-xl text-white font-bold text-sm cursor-pointer border-none transition-all duration-300"
+                style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  background: darkMode
+                    ? 'linear-gradient(135deg, #000000, #71717a, #cbd5e1)'
+                    : 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                  boxShadow: darkMode
+                    ? '0 0 20px rgba(2,132,199,0.2)'
+                    : '0 0 20px rgba(56,189,248,0.25)',
+                }}
+              >
+                Search
+              </button>
+            </form>
+
           </motion.div>
 
           {/* Back button */}

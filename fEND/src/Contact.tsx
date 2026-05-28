@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Setting from '../components/Setting'
@@ -71,7 +70,6 @@ function DotGrid({ darkMode }: { darkMode: boolean }) {
 }
 
 export default function Contact({ settings }: { settings: Settings }) {
-  const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
 
   const {
