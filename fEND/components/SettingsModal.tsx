@@ -1,18 +1,20 @@
 
+import type { Dispatch, SetStateAction } from 'react'
+
 type SettingsModalProps = {
   onClose: () => void
 
   darkMode: boolean
-  setDarkMode: React.Dispatch<React.SetStateAction<boolean>>
+  setDarkMode: Dispatch<SetStateAction<boolean>>
 
   animationMode: boolean
-  setAnimationMode: React.Dispatch<React.SetStateAction<boolean>>
+  setAnimationMode: Dispatch<SetStateAction<boolean>>
 
   motionMode: boolean
-  setMotionMode: React.Dispatch<React.SetStateAction<boolean>>
+  setMotionMode: Dispatch<SetStateAction<boolean>>
 
   notifications: boolean
-  setNotifications: React.Dispatch<React.SetStateAction<boolean>>
+  setNotifications: Dispatch<SetStateAction<boolean>>
 }
 
 export default function SettingsModal({
