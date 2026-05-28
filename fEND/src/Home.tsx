@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { motion, useInView, AnimatePresence } from 'framer-motion'
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, type FormEvent } from 'react'
 import SettingsModal from '../components/SettingsModal'
 import Setting from '../components/Setting'
 import type { Settings } from './main'
@@ -190,12 +190,28 @@ function Card({ item, index }: { item: typeof recommendations[0]; index: number 
   )
 }
 
+function titleCase(input: string) {
+  return input
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
 export default function Home({ settings }: { settings: Settings }) {
   const navigate = useNavigate()
   const [phase, setPhase] = useState<'graph' | 'fading' | 'done'>('graph')
   const [showModal, setShowModal] = useState(false)
+  const [searchText, setSearchText] = useState('')
 
   const { darkMode, setDarkMode, animationMode, setAnimationMode, motionMode, setMotionMode, notifications, setNotifications } = settings
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const trimmed = searchText.trim()
+    if (!trimmed) return
+    navigate(`/Result?q=${encodeURIComponent(titleCase(trimmed))}`)
+  }
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase('fading'), 2200)
@@ -289,16 +305,21 @@ export default function Home({ settings }: { settings: Settings }) {
             transition={{ duration: 0.6, delay: 0.15 }}
             className="flex gap-3 w-full max-w-[520px]"
           >
-            <input
-              className="flex-1 px-5 py-3 rounded-xl text-slate-200 text-[0.95rem] outline-none bg-slate-900/80"
-              style={{ fontFamily: "'IBM Plex Mono', monospace", border: '1px solid rgba(56,189,248,0.25)' }}
-              placeholder="Search anything..."
-            />
-            <button
-              className="px-6 py-3 rounded-xl text-white font-bold text-sm cursor-pointer border-none"
-              style={{ fontFamily: "'IBM Plex Mono', monospace", background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', boxShadow: '0 0 20px rgba(56,189,248,0.25)' }}>
-              Search
-            </button>
+            <form onSubmit={handleSearch} className="flex gap-3 w-full">
+              <input
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                className="flex-1 px-5 py-3 rounded-xl text-slate-200 text-[0.95rem] outline-none bg-slate-900/80"
+                style={{ fontFamily: "'IBM Plex Mono', monospace", border: '1px solid rgba(56,189,248,0.25)' }}
+                placeholder="Search anything..."
+              />
+              <button
+                type="submit"
+                className="px-6 py-3 rounded-xl text-white font-bold text-sm cursor-pointer border-none"
+                style={{ fontFamily: "'IBM Plex Mono', monospace", background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', boxShadow: '0 0 20px rgba(56,189,248,0.25)' }}>
+                Search
+              </button>
+            </form>
           </motion.div>
 
           <button onClick={() => navigate('/')}

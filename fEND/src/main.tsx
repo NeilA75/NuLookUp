@@ -7,6 +7,7 @@ import App from './App'
 import Home from './Home'
 import About from './About'
 import Contact from './Contact'
+import Result from './Result'
 
 
 export interface Settings {
@@ -45,6 +46,7 @@ function Root() {
         <Route path="/Home" element={<Home settings={settings} />} />
         <Route path = "/About" element={<About settings={settings} />} />
         <Route path = "/Contact" element={<Contact settings={settings} />} />
+        <Route path = "/Result" element={<Result settings={settings} />} />
       </Routes>
     </BrowserRouter>
   )
