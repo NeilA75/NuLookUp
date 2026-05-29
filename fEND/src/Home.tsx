@@ -285,7 +285,7 @@ export default function Home({ settings }: { settings: Settings }) {
   const [showModal, setShowModal] = useState(false)
   const [searchText, setSearchText] = useState('')
 
-  const { darkMode, setDarkMode, motionMode, setMotionMode, notifications, setNotifications } = settings
+ 
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
