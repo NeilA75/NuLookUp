@@ -1,40 +1,41 @@
-export type NewsArticle = {
-  id: string
-  title: string
-  source: string
-  url: string
-  summary: string
-  category: string
-  publishedAt: string
+import dotenv from "dotenv";
+dotenv.config();
+
+export interface NewsArticle {
+  title: string;
+  link: string;
+  source: string;
+  date: string;
+  snippet: string;
+  thumbnail?: string;
 }
 
-const SAMPLE_NEWS: NewsArticle[] = [
-  {
-    id: 'news-1',
-    title: 'Sneaker resale prices surge after limited drop',
-    source: 'Streetwear Daily',
-    url: 'https://example.com/news/sneaker-resale-prices',
-    summary: 'Limited edition releases are pushing resale values higher as collector demand remains strong.',
-    category: 'Sneakers',
-    publishedAt: '2026-06-01T08:00:00Z',
-  },
-  {
-    id: 'news-2',
-    title: 'Fashion brands lean into nostalgia for summer collabs',
-    source: 'Style Pulse',
-    url: 'https://example.com/news/fashion-nostalgia',
-    summary: 'Brands are revisiting classic silhouettes and archival colorways for new collaboration drops.',
-    category: 'Streetwear',
-    publishedAt: '2026-06-01T05:30:00Z',
-  },
-]
+export async function getNews(searchText: string): Promise<{ search: string; articles: NewsArticle[] }> {
+  const apiKey = process.env.NEWS_API_KEY;
+  console.log("Searching:", searchText);
 
-export async function getLatestNews(): Promise<NewsArticle[]> {
-  // Replace this with a real news API call or database query.
-  return SAMPLE_NEWS
-}
+  const params = new URLSearchParams({
+    q: searchText,
+    apiKey: apiKey!,
+    language: "en",
+    sortBy: "publishedAt",
+  });
 
-export async function getNewsByCategory(category: string): Promise<NewsArticle[]> {
-  const news = await getLatestNews()
-  return news.filter((article) => article.category.toLowerCase() === category.toLowerCase())
+  const res = await fetch(`https://newsapi.org/v2/everything?${params}`);
+  const data = await res.json();
+
+  console.log("NewsAPI status:", data.status);
+  console.log("Total results:", data.totalResults);
+  console.log("NewsAPI error:", data.message);
+
+  const articles: NewsArticle[] = (data.articles ?? []).slice(0, 5).map((item: any) => ({
+  title: item.title,
+  link: item.url,
+  source: item.source?.name ?? "",
+  date: item.publishedAt ? new Date(item.publishedAt).toLocaleDateString() : "",
+  snippet: item.description ?? "",
+  thumbnail: item.urlToImage,
+}));
+
+  return { search: searchText, articles };
 }

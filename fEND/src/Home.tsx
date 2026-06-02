@@ -285,15 +285,21 @@ export default function Home({ settings }: { settings: Settings }) {
   const [showModal, setShowModal] = useState(false)
   const [searchText, setSearchText] = useState('')
 
- 
+ const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
+  event.preventDefault();
+  const trimmed = searchText.trim();
+  if (!trimmed) return;
 
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const trimmed = searchText.trim()
-    if (!trimmed) return
-    navigate(`/Result?q=${encodeURIComponent(titleCase(trimmed))}`)
-  }
+  const response = await fetch(`http://localhost:3000/api/news?q=${encodeURIComponent(trimmed)}`);
+  const data = await response.json();
 
+  navigate(`/Result?q=${encodeURIComponent(titleCase(trimmed))}`, {
+    state: { articles: data.articles },   // <-- pass along
+  });
+};
+
+
+  
   useEffect(() => {
     // If motion is disabled, jump straight to done and skip the intro graph
     if (motionMode) {
@@ -516,3 +522,5 @@ export default function Home({ settings }: { settings: Settings }) {
     </div>
   )
 }
+
+
