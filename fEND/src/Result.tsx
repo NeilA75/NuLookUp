@@ -26,6 +26,7 @@ interface RealArticle {
 interface TrendPoint {
   day: string
   price: number
+  date?: string
 }
 
 interface SearchResult {
@@ -54,33 +55,46 @@ function titleCase(input: string) {
     .join(' ')
 }
 
-function createThirtyDaySeries(data: TrendPoint[]): TrendPoint[] {
-  if (data.length === 0) return []
-  if (data.length === 1) {
-    return Array.from({ length: 30 }, (_, index) => ({
-      day: `D${index + 1}`,
-      price: Number(data[0].price.toFixed(2)),
-    }))
-  }
+function aggregateTrendByYear(data: TrendPoint[]): TrendPoint[] {
+  const yearlyMap = new Map<string, { total: number; count: number }>()
+  data.forEach((point) => {
+    const year = point.date ? new Date(point.date).getFullYear().toString() : point.day
+    const bucket = yearlyMap.get(year) ?? { total: 0, count: 0 }
+    bucket.total += point.price
+    bucket.count += 1
+    yearlyMap.set(year, bucket)
+  })
 
-  const prev = data[data.length - 2]
-  const last = data[data.length - 1]
-  const points: TrendPoint[] = []
-
-  for (let i = 0; i < 30; i += 1) {
-    const ratio = i / 29
-    const price = prev.price + (last.price - prev.price) * ratio
-    points.push({ day: `D${i + 1}`, price: Number(price.toFixed(2)) })
-  }
-
-  return points
+  return Array.from(yearlyMap.entries()).map(([year, bucket]) => ({
+    day: year,
+    price: bucket.total / bucket.count,
+  }))
 }
 
 function getTimeFilteredData(data: TrendPoint[], range: string): TrendPoint[] {
-  if (range === '1M') return createThirtyDaySeries(data)
+  if (range === '1M') return data.length > 1 ? data.slice(-2) : data
   if (range === '6M') return data.slice(-6)
-  if (range === '1Y') return data
-  return data // 'All'
+  if (range === '1Y') return data.slice(-12)
+  return data.length > 12 ? aggregateTrendByYear(data) : data
+}
+
+function calculateTrendStats(data: TrendPoint[]) {
+  const prices = data.map((point) => point.price).filter((price) => Number.isFinite(price))
+  const lastPrice = prices[prices.length - 1] ?? 0
+  const firstPrice = prices[0] ?? lastPrice
+  const avgPrice = prices.length ? prices.reduce((sum, value) => sum + value, 0) / prices.length : 0
+  const lowPrice = prices.length ? Math.min(...prices) : 0
+  const highPrice = prices.length ? Math.max(...prices) : 0
+  const change = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0
+
+  return {
+    avgPrice: `$${avgPrice.toFixed(2)}`,
+    currentPrice: `$${lastPrice.toFixed(2)}`,
+    low: `$${lowPrice.toFixed(2)}`,
+    high: `$${highPrice.toFixed(2)}`,
+    change: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`,
+    changePositive: change >= 0,
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -216,7 +230,8 @@ function TrendGraph({
       ))}
 
       {data.map((d, i) => {
-        const labelInterval = Math.max(1, Math.floor(data.length / 6))
+        const maxLabels = data.length <= 12 ? data.length : 10
+        const labelInterval = Math.max(1, Math.floor(data.length / maxLabels))
         if (i % labelInterval !== 0 && i !== data.length - 1) return null
         return (
           <text
@@ -312,8 +327,12 @@ export default function Result({ settings }: { settings: Settings }) {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch(`http://localhost:3001/api/search?q=${encodeURIComponent(formattedQuery)}`)
-        if (!response.ok) throw new Error('Failed to fetch search result')
+        const apiUrl = import.meta.env.VITE_API_BASE_URL ?? '/api'
+        const response = await fetch(`${apiUrl}/search?q=${encodeURIComponent(formattedQuery)}`)
+        if (!response.ok) {
+          const text = await response.text()
+          throw new Error(`Failed to fetch search result: ${response.status} ${response.statusText} ${text}`)
+        }
         const data: SearchResult = await response.json()
         setSearchResult(data)
       } catch (err) {
@@ -341,7 +360,9 @@ export default function Result({ settings }: { settings: Settings }) {
 
   // Get filtered trend data based on selected time range
   const filteredTrend = searchResult ? getTimeFilteredData(searchResult.trend, timeRange) : []
-  const isPositive = searchResult?.changePositive ?? false
+  const statsTrend = searchResult ? (timeRange === 'All' ? searchResult.trend : filteredTrend) : []
+  const rangeStats = calculateTrendStats(statsTrend)
+  const isPositive = rangeStats.changePositive
 
   // Tag colors cycling for variety across articles
   const TAG_COLORS = ['#38bdf8', '#818cf8', '#34d399', '#fb923c', '#e879f9', '#fbbf24', '#fb7185']
@@ -548,7 +569,7 @@ export default function Result({ settings }: { settings: Settings }) {
                     WebkitTextFillColor: 'transparent',
                   }}
                 >
-                  {searchResult.currentPrice}
+                  {rangeStats.currentPrice}
                 </div>
 
                 <div className="w-full h-px bg-sky-400/10" />
@@ -570,7 +591,7 @@ export default function Result({ settings }: { settings: Settings }) {
                     WebkitTextFillColor: 'transparent',
                   }}
                 >
-                  {searchResult.avgPrice}
+                  {rangeStats.avgPrice}
                 </div>
 
                 <div className="w-full h-px bg-sky-400/10" />
@@ -579,7 +600,7 @@ export default function Result({ settings }: { settings: Settings }) {
                   className="text-[0.6rem] tracking-[0.2em] uppercase text-slate-600"
                   style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                 >
-                  12-Month Change
+                  {timeRange === 'All' ? 'Yearly Change' : `${timeRange} Change`}
                 </span>
 
                 <div className="flex items-center gap-2">
@@ -596,7 +617,7 @@ export default function Result({ settings }: { settings: Settings }) {
                         : '0 0 12px rgba(239,68,68,0.4)',
                     }}
                   >
-                    {searchResult.change}
+                    {rangeStats.change}
                   </span>
                 </div>
 
@@ -604,8 +625,8 @@ export default function Result({ settings }: { settings: Settings }) {
                   className="text-[0.65rem] text-slate-600 leading-relaxed"
                   style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                 >
-                  <div>Low: <span className="text-slate-400">{searchResult.low}</span></div>
-                  <div>High: <span className="text-slate-400">{searchResult.high}</span></div>
+                  <div>Low: <span className="text-slate-400">{rangeStats.low}</span></div>
+                  <div>High: <span className="text-slate-400">{rangeStats.high}</span></div>
                 </div>
               </div>
             </motion.div>

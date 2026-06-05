@@ -62,14 +62,15 @@ function parseYahooChart(data: any): RawPricePoint[] {
     const timestamp = timestamps[i];
     const price = Number(closePrices[i]);
     if (!timestamp || Number.isNaN(price) || price <= 0) continue;
-    result.push({ month: monthLabel(new Date(timestamp * 1000).toISOString()), price });
+    const isoDate = new Date(timestamp * 1000).toISOString();
+    result.push({ month: monthLabel(isoDate), price, date: isoDate });
   }
 
   return result;
 }
 
 async function fetchYahooCommodityChart(symbol: string): Promise<RawPricePoint[]> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1y&interval=1mo`;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=max&interval=1mo`;
 
   try {
     const response = await axios.get(url, { timeout: 20000 });
@@ -83,7 +84,7 @@ async function fetchYahooCommodityChart(symbol: string): Promise<RawPricePoint[]
 function parseYahooCsv(csv: string): RawPricePoint[] {
   const lines = csv.trim().split('\n');
   const rows = lines.slice(1);
-  const monthly: Array<{ month: string; price: number }> = [];
+  const monthly: RawPricePoint[] = [];
 
   for (const line of rows) {
     const parts = line.split(',');
@@ -93,7 +94,7 @@ function parseYahooCsv(csv: string): RawPricePoint[] {
     const price = Number(close);
     if (Number.isNaN(price) || price <= 0) continue;
 
-    monthly.push({ month: monthLabel(date), price });
+    monthly.push({ month: monthLabel(date), price, date: new Date(date).toISOString() } as RawPricePoint);
   }
 
   return monthly.slice(-12);
@@ -135,10 +136,10 @@ export async function getCommodityPrices(query: string): Promise<RawPricePoint[]
         const data = response.data?.['Monthly Time Series'] ?? response.data?.['Monthly Adjusted Time Series'];
         if (data && typeof data === 'object') {
           const result = Object.entries(data)
-            .slice(0, 12)
             .map(([date, values]) => ({
               month: monthLabel(date as string),
               price: Number((values as any)['4. close'] ?? 0),
+              date: new Date(date as string).toISOString(),
             }))
             .reverse();
 

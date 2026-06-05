@@ -34,7 +34,7 @@ export async function getCryptoPrices(query: string): Promise<RawPricePoint[]> {
       {
         params: {
           vs_currency: 'usd',
-          days: 365,
+          days: 'max',
           interval: 'monthly',
         },
         timeout: 20000,
@@ -46,8 +46,8 @@ export async function getCryptoPrices(query: string): Promise<RawPricePoint[]> {
       .map((row) => ({
         month: new Date(row[0]).toLocaleString('en-US', { month: 'short' }),
         price: Number(row[1] ?? 0),
-      }))
-      .slice(-12);
+        date: new Date(row[0]).toISOString(),
+      }));
 
     return trend;
   } catch (error) {

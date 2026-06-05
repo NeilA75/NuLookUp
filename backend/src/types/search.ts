@@ -1,6 +1,7 @@
 export interface RawPricePoint {
   month: string;
   price: number;
+  date?: string;
 }
 
 export interface AggregatedPriceData {
@@ -10,7 +11,7 @@ export interface AggregatedPriceData {
   changePositive: boolean;
   low: string;
   high: string;
-  trend: { day: string; price: number }[];
+  trend: { day: string; price: number; date?: string }[];
 }
 
 export interface Article {
@@ -31,7 +32,7 @@ export interface SearchResult {
   low: string;
   high: string;
   currentPrice: string;
-  trend: { day: string; price: number }[];
+  trend: { day: string; price: number; date?: string }[];
   summary: string;
   articles: Article[];
 }

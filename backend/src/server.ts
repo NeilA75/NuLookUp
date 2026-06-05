@@ -25,7 +25,12 @@ app.use((req, res, next) => {
 
 app.use('/api', router);
 
-const port = process.env.PORT ? Number(process.env.PORT) : 3001;
+const port = process.env.BACKEND_PORT
+  ? Number(process.env.BACKEND_PORT)
+  : process.env.PORT
+  ? Number(process.env.PORT)
+  : 3001;
+
 app.listen(port, () => {
   console.log(`NuLookUp backend listening on port ${port} — reload ${new Date().toISOString()}`);
 });
