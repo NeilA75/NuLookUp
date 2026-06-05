@@ -311,7 +311,7 @@ export default function Result({ settings }: { settings: Settings }) {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch(`http://localhost:3000/api/search?q=${encodeURIComponent(formattedQuery)}`)
+        const response = await fetch(`/api/search?q=${encodeURIComponent(formattedQuery)}`)
         if (!response.ok) throw new Error('Failed to fetch search result')
         const data: SearchResult = await response.json()
         setSearchResult(data)

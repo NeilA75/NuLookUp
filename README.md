@@ -1,6 +1,6 @@
 # 🚀 Running the Project
 
-Refer to overall and semester documentation in the GitHub Wiki.
+Use the root command to start backend and frontend together.
 
 ---
 
@@ -11,6 +11,18 @@ git clone https://github.com/your-username/NuLookUp.git
 cd NuLookUp
 npm install
 ```
+
+---
+
+## ▶️ Run Backend and Frontend Together
+
+From the repository root:
+
+```bash
+npm run dev
+```
+
+This runs the backend from `backend/` and the frontend from `fEND/`.
 
 ---
 

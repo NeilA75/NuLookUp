@@ -1,0 +1,14 @@
+{
+  "name": "nulookup-monorepo",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix fEND run dev",
+    "dev": "npx concurrently -k \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix fEND run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
