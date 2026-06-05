@@ -172,11 +172,13 @@ function Card({
   index,
   darkMode,
   motionMode,
+  onSelect,
 }: {
   item: typeof recommendations[0]
   index: number
   darkMode: boolean
   motionMode: boolean
+  onSelect?: () => void
 }) {
   const ref = useRef(null)
   const isInView = useInView(ref, { margin: '-80px', amount: 0.3 })
@@ -193,8 +195,11 @@ function Card({
       ref={ref}
       animate={animateProps}
       transition={motionMode ? { duration: 0 } : { duration: 0.45, delay: index * 0.06 }}
-      className="relative overflow-hidden rounded-2xl p-5 cursor-pointer backdrop-blur-md"
+      onClick={onSelect}
+      role={onSelect ? 'button' : undefined}
+      className="relative overflow-hidden rounded-2xl p-5 backdrop-blur-md"
       style={{
+        cursor: onSelect ? 'pointer' : 'default',
         background: darkMode
           ? 'linear-gradient(135deg, rgba(241,245,249,0.97), rgba(226,232,240,0.92))'
           : 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(15,23,42,0.8))',
@@ -203,7 +208,6 @@ function Card({
           : '1px solid rgba(56,189,248,0.15)',
         boxShadow: darkMode ? '0 2px 12px rgba(0,0,0,0.06)' : 'none',
       }}
-      // No hover animation when motion is disabled
       whileHover={motionMode ? undefined : {
         borderColor: typeStyle.border,
         boxShadow: `0 0 30px ${typeStyle.bg}, 0 8px 32px ${darkMode ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.4)'}`,
@@ -285,21 +289,20 @@ export default function Home({ settings }: { settings: Settings }) {
   const [showModal, setShowModal] = useState(false)
   const [searchText, setSearchText] = useState('')
 
- const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
-  event.preventDefault();
-  const trimmed = searchText.trim();
-  if (!trimmed) return;
+ const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+  event.preventDefault()
+  const trimmed = searchText.trim()
+  if (!trimmed) return
+  navigate(`/Result?q=${encodeURIComponent(titleCase(trimmed))}`)
+}
 
-  const response = await fetch(`http://localhost:3000/api/news?q=${encodeURIComponent(trimmed)}`);
-  const data = await response.json();
+ const handleSelect = (query: string) => {
+  const formatted = titleCase(query.trim())
+  if (!formatted) return
+  setSearchText(formatted)
+  navigate(`/Result?q=${encodeURIComponent(formatted)}`)
+}
 
-  navigate(`/Result?q=${encodeURIComponent(titleCase(trimmed))}`, {
-    state: { articles: data.articles },   // <-- pass along
-  });
-};
-
-
-  
   useEffect(() => {
     // If motion is disabled, jump straight to done and skip the intro graph
     if (motionMode) {
@@ -514,7 +517,14 @@ export default function Home({ settings }: { settings: Settings }) {
           </div>
           <div className="flex flex-col gap-3.5">
             {recommendations.map((item, i) => (
-              <Card key={i} item={item} index={i} darkMode={darkMode} motionMode={motionMode} />
+              <Card
+                key={i}
+                item={item}
+                index={i}
+                darkMode={darkMode}
+                motionMode={motionMode}
+                onSelect={() => handleSelect(item.title)}
+              />
             ))}
           </div>
         </div>

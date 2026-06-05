@@ -2,9 +2,9 @@
 // Result.tsx — Search Result Page for NuLookUp
 // ============================================================
 
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, useRef, type FormEvent } from 'react'
 import type { Settings } from './main'
 import NavBar from '../components/NavBar'
 import Setting from '../components/Setting'
@@ -23,31 +23,23 @@ interface RealArticle {
   thumbnail?: string
 }
 
-// ─────────────────────────────────────────────
-// PLACEHOLDER DATA (price graph + summary still mocked)
-// ─────────────────────────────────────────────
+interface TrendPoint {
+  day: string
+  price: number
+}
 
-const PLACEHOLDER_PRICES: { day: string; price: number }[] = [
-  { day: 'Jan', price: 152 },
-  { day: 'Feb', price: 160 },
-  { day: 'Mar', price: 145 },
-  { day: 'Apr', price: 171 },
-  { day: 'May', price: 168 },
-  { day: 'Jun', price: 182 },
-  { day: 'Jul', price: 178 },
-  { day: 'Aug', price: 195 },
-  { day: 'Sep', price: 189 },
-  { day: 'Oct', price: 204 },
-  { day: 'Nov', price: 198 },
-  { day: 'Dec', price: 215 },
-]
-
-const PLACEHOLDER_AVG_PRICE = '$189.99'
-const PLACEHOLDER_CHANGE = '+12.4%'
-const PLACEHOLDER_CHANGE_POSITIVE = true
-
-const PLACEHOLDER_SUMMARY =
-  'The Nike Air Max series has maintained strong secondary market value throughout the year, driven by consistent demand from both athletic users and collectors. Recent colorway releases have pushed average resale premiums above 18% over retail. Supply constraints in sizes 9–11 continue to apply upward pressure on pricing across major platforms.'
+interface SearchResult {
+  query: string
+  category: string
+  avgPrice: string
+  change: string
+  changePositive: boolean
+  low: string
+  high: string
+  trend: TrendPoint[]
+  summary: string
+  articles: RealArticle[]
+}
 
 // ─────────────────────────────────────────────
 // HELPERS
@@ -61,25 +53,61 @@ function titleCase(input: string) {
     .join(' ')
 }
 
+function createThirtyDaySeries(data: TrendPoint[]): TrendPoint[] {
+  if (data.length === 0) return []
+  if (data.length === 1) {
+    return Array.from({ length: 30 }, (_, index) => ({
+      day: `D${index + 1}`,
+      price: Number(data[0].price.toFixed(2)),
+    }))
+  }
+
+  const prev = data[data.length - 2]
+  const last = data[data.length - 1]
+  const points: TrendPoint[] = []
+
+  for (let i = 0; i < 30; i += 1) {
+    const ratio = i / 29
+    const price = prev.price + (last.price - prev.price) * ratio
+    points.push({ day: `D${i + 1}`, price: Number(price.toFixed(2)) })
+  }
+
+  return points
+}
+
+function getTimeFilteredData(data: TrendPoint[], range: string): TrendPoint[] {
+  if (range === '1M') return createThirtyDaySeries(data)
+  if (range === '6M') return data.slice(-6)
+  if (range === '1Y') return data
+  return data // 'All'
+}
+
 // ─────────────────────────────────────────────
 // COMPONENT: TrendGraph
 // ─────────────────────────────────────────────
 
-function TrendGraph({ data }: { data: typeof PLACEHOLDER_PRICES }) {
+function TrendGraph({
+  data,
+  lockedIndex,
+  onLockIndex,
+}: {
+  data: TrendPoint[]
+  lockedIndex: number | null
+  onLockIndex: (index: number | null) => void
+}) {
   const W = 800
   const H = 220
   const PAD = { top: 20, right: 20, bottom: 36, left: 48 }
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number; price: number; day: string; index: number } | null>(null)
 
-  const prices = data.map(d => d.price)
+  const prices = data.map((d) => d.price).filter((p) => Number.isFinite(p))
   const minP = Math.min(...prices)
   const maxP = Math.max(...prices)
-  const range = maxP - minP || 1
+  const valueRange = Math.max(1, maxP - minP)
 
-  const toY = (p: number) =>
-    PAD.top + ((maxP - p) / range) * (H - PAD.top - PAD.bottom)
-
-  const toX = (i: number) =>
-    PAD.left + (i / (data.length - 1)) * (W - PAD.left - PAD.right)
+  const toY = (p: number) => PAD.top + ((maxP - p) / valueRange) * (H - PAD.top - PAD.bottom)
+  const toX = (i: number) => (data.length <= 1 ? W / 2 : PAD.left + (i / (data.length - 1)) * (W - PAD.left - PAD.right))
 
   const pathD = data.reduce((acc, d, i) => {
     const x = toX(i)
@@ -94,16 +122,74 @@ function TrendGraph({ data }: { data: typeof PLACEHOLDER_PRICES }) {
   const areaD = `${pathD} L ${toX(data.length - 1)},${H - PAD.bottom} L ${toX(0)},${H - PAD.bottom} Z`
 
   const yTicks = Array.from({ length: 4 }, (_, i) => {
-    const price = minP + (range * i) / 3
+    const price = minP + (valueRange * i) / 3
     return { y: toY(price), label: `$${Math.round(price)}` }
   })
 
+  const handleSvgMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!svgRef.current || data.length === 0) return
+    const rect = svgRef.current.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const relativeX = (mouseX / rect.width) * W
+
+    if (relativeX < PAD.left || relativeX > W - PAD.right) {
+      setHoverPoint(null)
+      return
+    }
+
+    let closestIndex = 0
+    let closestDist = Infinity
+    for (let i = 0; i < data.length; i += 1) {
+      const pointX = toX(i)
+      const dist = Math.abs(pointX - relativeX)
+      if (dist < closestDist) {
+        closestDist = dist
+        closestIndex = i
+      }
+    }
+
+    const point = data[closestIndex]
+    if (point) {
+      setHoverPoint({
+        x: toX(closestIndex),
+        y: toY(point.price),
+        price: point.price,
+        day: point.day,
+        index: closestIndex,
+      })
+    }
+  }
+
+  const handleSvgMouseLeave = () => {
+    if (lockedIndex === null) setHoverPoint(null)
+  }
+
+  const handleClick = () => {
+    if (hoverPoint) {
+      const nextLock = hoverPoint.index === lockedIndex ? null : hoverPoint.index
+      onLockIndex(nextLock)
+    }
+  }
+
+  const activeIndex = lockedIndex ?? hoverPoint?.index
+  const activePoint = activeIndex != null ? {
+    x: toX(activeIndex),
+    y: toY(data[activeIndex].price),
+    price: data[activeIndex].price,
+    day: data[activeIndex].day,
+    index: activeIndex,
+  } : null
+
   return (
     <svg
+      ref={svgRef}
       viewBox={`0 0 ${W} ${H}`}
       preserveAspectRatio="none"
-      className="w-full h-full"
+      className="w-full h-full cursor-crosshair"
       style={{ overflow: 'visible' }}
+      onMouseMove={handleSvgMouseMove}
+      onMouseLeave={handleSvgMouseLeave}
+      onClick={handleClick}
     >
       <defs>
         <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -112,66 +198,73 @@ function TrendGraph({ data }: { data: typeof PLACEHOLDER_PRICES }) {
         </linearGradient>
         <filter id="glow">
           <feGaussianBlur stdDeviation="3" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
         </filter>
       </defs>
 
       {yTicks.map((t, i) => (
         <g key={i}>
-          <line
-            x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y}
-            stroke="rgba(56,189,248,0.08)" strokeWidth="1" strokeDasharray="4 4"
-          />
-          <text
-            x={PAD.left - 8} y={t.y + 4}
-            fill="rgba(148,163,184,0.5)"
-            fontSize="10" textAnchor="end"
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-          >
+          <line x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y} stroke="rgba(56,189,248,0.08)" strokeWidth="1" strokeDasharray="4 4" />
+          <text x={PAD.left - 8} y={t.y + 4} fill="rgba(148,163,184,0.5)" fontSize="10" textAnchor="end" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
             {t.label}
           </text>
         </g>
       ))}
 
-      {data.map((d, i) => (
-        <text
-          key={i}
-          x={toX(i)} y={H - PAD.bottom + 16}
-          fill="rgba(148,163,184,0.4)"
-          fontSize="9" textAnchor="middle"
-          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-        >
-          {d.day}
-        </text>
-      ))}
+      {data.map((d, i) => {
+        const labelInterval = Math.max(1, Math.floor(data.length / 6))
+        if (i % labelInterval !== 0 && i !== data.length - 1) return null
+        return (
+          <text
+            key={i}
+            x={toX(i)}
+            y={H - PAD.bottom + 16}
+            fill="rgba(148,163,184,0.4)"
+            fontSize="9"
+            textAnchor="middle"
+            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+          >
+            {d.day}
+          </text>
+        )
+      })}
 
       <path d={areaD} fill="url(#areaGrad)" />
 
-      <path
-        d={pathD}
-        fill="none"
-        stroke="#38bdf8"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        filter="url(#glow)"
-      />
+      <path d={pathD} fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" filter="url(#glow)" />
 
-      <circle
-        cx={toX(data.length - 1)}
-        cy={toY(data[data.length - 1].price)}
-        r="5"
-        fill="#38bdf8"
-        filter="url(#glow)"
-      />
-      <circle
-        cx={toX(data.length - 1)}
-        cy={toY(data[data.length - 1].price)}
-        r="9"
-        fill="none"
-        stroke="#38bdf8"
-        strokeWidth="1"
-        strokeOpacity="0.4"
-      />
+      {/* Vertical crosshair line on hover/lock */}
+      {activePoint && (
+        <line x1={activePoint.x} y1={PAD.top} x2={activePoint.x} y2={H - PAD.bottom} stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.6" />
+      )}
+
+      {/* Hover/lock circle and tooltip */}
+      {activePoint && (
+        <>
+          <circle cx={activePoint.x} cy={activePoint.y} r="6" fill={lockedIndex !== null ? '#fbbf24' : '#38bdf8'} filter="url(#glow)" />
+          <circle cx={activePoint.x} cy={activePoint.y} r="11" fill="none" stroke={lockedIndex !== null ? '#fbbf24' : '#38bdf8'} strokeWidth="1.5" strokeOpacity="0.4" />
+
+          {/* Tooltip background */}
+          <rect x={activePoint.x - 55} y={activePoint.y - 40} width="110" height="32" rx="6" fill="rgba(15,23,42,0.95)" stroke={lockedIndex !== null ? '#fbbf24' : '#38bdf8'} strokeWidth="1" />
+
+          {/* Day label */}
+          <text x={activePoint.x} y={activePoint.y - 22} fill="#e2e8f0" fontSize="10" fontWeight="600" textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+            {activePoint.day}
+          </text>
+
+          {/* Price value */}
+          <text x={activePoint.x} y={activePoint.y - 8} fill={lockedIndex !== null ? '#fbbf24' : '#38bdf8'} fontSize="11" fontWeight="700" textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+            ${activePoint.price.toFixed(2)}
+          </text>
+        </>
+      )}
+
+      {/* Last point indicator */}
+      <circle cx={toX(data.length - 1)} cy={toY(data[data.length - 1]?.price || 0)} r="5" fill="#38bdf8" filter="url(#glow)" />
+      <circle cx={toX(data.length - 1)} cy={toY(data[data.length - 1]?.price || 0)} r="9" fill="none" stroke="#38bdf8" strokeWidth="1" strokeOpacity="0.4" />
     </svg>
   )
 }
@@ -182,7 +275,6 @@ function TrendGraph({ data }: { data: typeof PLACEHOLDER_PRICES }) {
 
 export default function Result({ settings }: { settings: Settings }) {
   const navigate = useNavigate()
-  const location = useLocation()
   const [showModal, setShowModal] = useState(false)
 
   const {
@@ -200,8 +292,39 @@ export default function Result({ settings }: { settings: Settings }) {
   const displayQuery = formattedQuery || '[Placeholder Item]'
   const [searchText, setSearchText] = useState(formattedQuery)
 
-  // ── Real articles from router state (passed by Home.tsx after fetch) ──
-  const articles: RealArticle[] = location.state?.articles ?? []
+  // Backend search result data
+  const [searchResult, setSearchResult] = useState<SearchResult | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Time range filter state
+  const [timeRange, setTimeRange] = useState<'1M' | '6M' | '1Y' | 'All'>('1Y')
+
+  // Hover/lock state for graph
+  const [lockedIndex, setLockedIndex] = useState<number | null>(null)
+
+  // Fetch search result from backend
+  useEffect(() => {
+    async function fetchSearchResult() {
+      if (!formattedQuery) return
+
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await fetch(`http://localhost:3000/api/search?q=${encodeURIComponent(formattedQuery)}`)
+        if (!response.ok) throw new Error('Failed to fetch search result')
+        const data: SearchResult = await response.json()
+        setSearchResult(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+        setSearchResult(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSearchResult()
+  }, [formattedQuery])
 
   useEffect(() => {
     setSearchText(formattedQuery)
@@ -212,17 +335,12 @@ export default function Result({ settings }: { settings: Settings }) {
     const trimmed = searchText.trim()
     if (!trimmed) return
 
-    const response = await fetch(
-      `http://localhost:3000/api/news?q=${encodeURIComponent(trimmed)}`
-    )
-    const data = await response.json()
-
-    navigate(`/Result?q=${encodeURIComponent(titleCase(trimmed))}`, {
-      state: { articles: data.articles },
-    })
+    navigate(`/Result?q=${encodeURIComponent(titleCase(trimmed))}`)
   }
 
-  const isPositive = PLACEHOLDER_CHANGE_POSITIVE
+  // Get filtered trend data based on selected time range
+  const filteredTrend = searchResult ? getTimeFilteredData(searchResult.trend, timeRange) : []
+  const isPositive = searchResult?.changePositive ?? false
 
   // Tag colors cycling for variety across articles
   const TAG_COLORS = ['#38bdf8', '#818cf8', '#34d399', '#fb923c', '#e879f9', '#fbbf24', '#fb7185']
@@ -333,312 +451,316 @@ export default function Result({ settings }: { settings: Settings }) {
           </span>
         </motion.div>
 
-        {/* ── BOX 1: Trend graph + Price panel ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15 }}
-          className="rounded-2xl overflow-hidden mb-4"
-          style={{
-            background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(15,23,42,0.85))',
-            border: '1px solid rgba(56,189,248,0.15)',
-            display: 'grid',
-            gridTemplateColumns: '4fr 1fr',
-          }}
-        >
-          {/* Left: Trend Graph */}
-          <div className="p-6 border-r border-sky-400/10">
-            <div className="flex items-center justify-between mb-4">
-              <h2
-                className="text-slate-300 font-bold text-sm tracking-wide"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-              >
-                Price History — {displayQuery}
-              </h2>
-              <div className="flex gap-2">
-                {['1M', '6M', '1Y', 'All'].map(range => (
-                  <button
-                    key={range}
-                    className="text-[0.6rem] tracking-widest px-2.5 py-1 rounded-lg border-none cursor-pointer transition-colors"
-                    style={{
-                      fontFamily: "'IBM Plex Mono', monospace",
-                      background: range === '1Y' ? 'rgba(56,189,248,0.15)' : 'transparent',
-                      color: range === '1Y' ? '#38bdf8' : 'rgba(148,163,184,0.4)',
-                      border: range === '1Y' ? '1px solid rgba(56,189,248,0.3)' : '1px solid transparent',
-                    }}
-                  >
-                    {range}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="w-full" style={{ height: '200px' }}>
-              <TrendGraph data={PLACEHOLDER_PRICES} />
-            </div>
-          </div>
+        {/* Loading state */}
+        {loading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-16"
+          >
+            <p style={{ fontFamily: "'IBM Plex Mono', monospace", color: '#94a3b8' }}>
+              Loading search results...
+            </p>
+          </motion.div>
+        )}
 
-          {/* Right: Average Price + Change */}
-          <div className="p-6 flex flex-col justify-center items-start gap-3">
-            <span
-              className="text-[0.6rem] tracking-[0.2em] uppercase text-slate-600"
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-            >
-              Avg. Price
-            </span>
+        {/* Error state */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-16"
+          >
+            <p style={{ fontFamily: "'IBM Plex Mono', monospace", color: '#ef4444' }}>
+              {error}
+            </p>
+          </motion.div>
+        )}
 
-            <div
-              className="font-extrabold leading-none"
+        {/* Content */}
+        {!loading && !error && searchResult && (
+          <>
+            {/* ── BOX 1: Trend graph + Price panel ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className="rounded-2xl overflow-hidden mb-4"
               style={{
-                fontFamily: "'IBM Plex Mono', monospace",
-                fontSize: 'clamp(1.4rem, 2.5vw, 2rem)',
-                background: 'linear-gradient(135deg, #e2e8f0, #38bdf8)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(15,23,42,0.85))',
+                border: '1px solid rgba(56,189,248,0.15)',
+                display: 'grid',
+                gridTemplateColumns: '4fr 1fr',
               }}
             >
-              {PLACEHOLDER_AVG_PRICE}
-            </div>
-
-            <div className="w-full h-px bg-sky-400/10" />
-
-            <span
-              className="text-[0.6rem] tracking-[0.2em] uppercase text-slate-600"
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-            >
-              12-Month Change
-            </span>
-
-            <div className="flex items-center gap-2">
-              <span style={{ color: isPositive ? '#10b981' : '#ef4444', fontSize: '0.75rem' }}>
-                {isPositive ? '▲' : '▼'}
-              </span>
-              <span
-                className="font-bold text-xl"
-                style={{
-                  fontFamily: "'IBM Plex Mono', monospace",
-                  color: isPositive ? '#10b981' : '#ef4444',
-                  textShadow: isPositive
-                    ? '0 0 12px rgba(16,185,129,0.4)'
-                    : '0 0 12px rgba(239,68,68,0.4)',
-                }}
-              >
-                {PLACEHOLDER_CHANGE}
-              </span>
-            </div>
-
-            <div
-              className="text-[0.65rem] text-slate-600 leading-relaxed"
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-            >
-              <div>Low: <span className="text-slate-400">[$$$]</span></div>
-              <div>High: <span className="text-slate-400">[$$$]</span></div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── BOX 2: Summary ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.25 }}
-          className="rounded-2xl p-6 mb-6"
-          style={{
-            background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(15,23,42,0.85))',
-            border: '1px solid rgba(56,189,248,0.15)',
-          }}
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <span
-              className="text-[0.6rem] tracking-[0.25em] uppercase text-sky-400 border border-sky-400/30 px-3 py-0.5 rounded-full bg-sky-400/5"
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-            >
-              Summary
-            </span>
-            <span
-              className="text-[0.6rem] tracking-[0.2em] uppercase px-3 py-0.5 rounded-full"
-              style={{
-                fontFamily: "'IBM Plex Mono', monospace",
-                background: 'rgba(99,102,241,0.15)',
-                color: '#818cf8',
-                border: '1px solid rgba(99,102,241,0.3)',
-              }}
-            >
-              [???] Category
-            </span>
-          </div>
-
-          <p
-            className="text-slate-400 leading-relaxed text-sm max-w-4xl"
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-          >
-            {PLACEHOLDER_SUMMARY}
-          </p>
-
-          <div className="grid grid-cols-2 gap-4 mt-5 sm:grid-cols-4">
-            {[
-              { label: 'Retail Price', value: '[$$$]' },
-              { label: 'Avg Resale',   value: '[$$$]' },
-              { label: 'Premium',      value: '[$$$]' },
-              { label: 'Last Sale',    value: '[$$$]' },
-            ].map(f => (
-              <div
-                key={f.label}
-                className="rounded-xl p-3"
-                style={{
-                  background: 'rgba(56,189,248,0.04)',
-                  border: '1px solid rgba(56,189,248,0.08)',
-                }}
-              >
-                <div
-                  className="text-[0.6rem] text-slate-600 uppercase tracking-widest mb-1"
-                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                >
-                  {f.label}
-                </div>
-                <div
-                  className="text-slate-300 font-bold text-base"
-                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                >
-                  {f.value}
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* ── BOX 3: Related Articles ── */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.35 }}
-          className="flex items-center gap-3 mb-4"
-        >
-          <span
-            className="w-2 h-2 rounded-full inline-block"
-            style={{ background: '#818cf8', boxShadow: '0 0 8px #818cf8' }}
-          />
-          <h2
-            className="text-[0.75rem] text-slate-500 tracking-[0.15em] uppercase"
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-          >
-            Related Articles
-          </h2>
-          {articles.length > 0 && (
-            <span
-              className="text-[0.6rem] text-slate-700 ml-1"
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-            >
-              ({articles.length})
-            </span>
-          )}
-        </motion.div>
-
-        {/* Article cards row */}
-        <div className="flex gap-3 pb-16" style={{ alignItems: 'stretch' }}>
-          {articles.length > 0 ? (
-            articles.map((article, i) => {
-              const tagColor = TAG_COLORS[i % TAG_COLORS.length]
-              return (
-                <motion.a
-                  key={i}
-                  href={article.link}
-                  target="_blank"
-                  rel="noreferrer"
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, delay: 0.5 + i * 0.08 }}
-                  className="flex flex-col rounded-2xl p-5 cursor-pointer backdrop-blur-md min-h-[220px]"
-                  style={{
-                    background: 'linear-gradient(160deg, rgba(15,23,42,0.97), rgba(15,23,42,0.8))',
-                    border: '1px solid rgba(56,189,248,0.12)',
-                    flex: '1 1 0',
-                    minWidth: '180px',
-                    textDecoration: 'none',
-                  }}
-                  whileHover={{
-                    borderColor: tagColor + '55',
-                    boxShadow: `0 0 28px ${tagColor}18, 0 8px 32px rgba(0,0,0,0.5)`,
-                    y: -3,
-                  }}
-                >
-                  {/* Tag + date */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span
-                      className="text-[0.6rem] tracking-widest uppercase px-2 py-0.5 rounded-full"
-                      style={{
-                        background: tagColor + '18',
-                        color: tagColor,
-                        border: `1px solid ${tagColor}44`,
-                        fontFamily: "'IBM Plex Mono', monospace",
-                      }}
-                    >
-                      NEWS
-                    </span>
-                    <span
-                      className="text-[0.6rem] text-slate-600"
-                      style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                    >
-                      {article.date}
-                    </span>
-                  </div>
-
-                  {/* Source */}
-                  <p
-                    className="text-[0.65rem] text-slate-600 uppercase tracking-widest mb-2"
+              {/* Left: Trend Graph */}
+              <div className="p-6 border-r border-sky-400/10">
+                <div className="flex items-center justify-between mb-4">
+                  <h2
+                    className="text-slate-300 font-bold text-sm tracking-wide"
                     style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                   >
-                    {article.source}
-                  </p>
-
-                  {/* Headline */}
-                  <h3
-                      className="text-slate-200 font-bold text-sm leading-snug mb-3 flex-1"
-                      style={{
-                        fontFamily: "'IBM Plex Mono', monospace",
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,         // max 3 lines
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {article.title}
-                    </h3>
-
-                    {/* Snippet */}
-                    <p
-                      className="text-slate-500 text-xs leading-relaxed"
-                      style={{
-                        fontFamily: "'IBM Plex Mono', monospace",
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,         // max 3 lines
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {article.snippet}
-                    </p>
-
-                  {/* Read more */}
-                  <div className="mt-4">
-                    <span
-                      className="text-[0.65rem] tracking-widest uppercase"
-                      style={{ color: tagColor, fontFamily: "'IBM Plex Mono', monospace" }}
-                    >
-                      Read More →
-                    </span>
+                    Price History — {displayQuery}
+                  </h2>
+                  <div className="flex gap-2">
+                    {(['1M', '6M', '1Y', 'All'] as const).map((range) => (
+                      <button
+                        key={range}
+                        onClick={() => {
+                          setTimeRange(range)
+                          setLockedIndex(null)
+                        }}
+                        className="text-[0.6rem] tracking-widest px-2.5 py-1 rounded-lg border-none cursor-pointer transition-colors"
+                        style={{
+                          fontFamily: "'IBM Plex Mono', monospace",
+                          background: range === timeRange ? 'rgba(56,189,248,0.15)' : 'transparent',
+                          color: range === timeRange ? '#38bdf8' : 'rgba(148,163,184,0.4)',
+                          border: range === timeRange ? '1px solid rgba(56,189,248,0.3)' : '1px solid transparent',
+                        }}
+                      >
+                        {range}
+                      </button>
+                    ))}
                   </div>
-                </motion.a>
-              )
-            })
-          ) : (
-            <p
-              className="text-slate-600 text-sm"
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                </div>
+                <div className="w-full" style={{ height: '200px' }}>
+                  <TrendGraph data={filteredTrend} lockedIndex={lockedIndex} onLockIndex={setLockedIndex} />
+                </div>
+              </div>
+
+              {/* Right: Average Price + Change */}
+              <div className="p-6 flex flex-col justify-center items-start gap-3">
+                <span
+                  className="text-[0.6rem] tracking-[0.2em] uppercase text-slate-600"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                >
+                  Avg. Price
+                </span>
+
+                <div
+                  className="font-extrabold leading-none"
+                  style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: 'clamp(1.4rem, 2.5vw, 2rem)',
+                    background: 'linear-gradient(135deg, #e2e8f0, #38bdf8)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  {searchResult.avgPrice}
+                </div>
+
+                <div className="w-full h-px bg-sky-400/10" />
+
+                <span
+                  className="text-[0.6rem] tracking-[0.2em] uppercase text-slate-600"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                >
+                  12-Month Change
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <span style={{ color: isPositive ? '#10b981' : '#ef4444', fontSize: '0.75rem' }}>
+                    {isPositive ? '▲' : '▼'}
+                  </span>
+                  <span
+                    className="font-bold text-xl"
+                    style={{
+                      fontFamily: "'IBM Plex Mono', monospace",
+                      color: isPositive ? '#10b981' : '#ef4444',
+                      textShadow: isPositive
+                        ? '0 0 12px rgba(16,185,129,0.4)'
+                        : '0 0 12px rgba(239,68,68,0.4)',
+                    }}
+                  >
+                    {searchResult.change}
+                  </span>
+                </div>
+
+                <div
+                  className="text-[0.65rem] text-slate-600 leading-relaxed"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                >
+                  <div>Low: <span className="text-slate-400">{searchResult.low}</span></div>
+                  <div>High: <span className="text-slate-400">{searchResult.high}</span></div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* ── BOX 2: Summary ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+              className="rounded-2xl p-6 mb-6"
+              style={{
+                background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(15,23,42,0.85))',
+                border: '1px solid rgba(56,189,248,0.15)',
+              }}
             >
-              No articles found.
-            </p>
-          )}
-        </div>
+              <div className="flex items-center gap-3 mb-4">
+                <span
+                  className="text-[0.6rem] tracking-[0.25em] uppercase text-sky-400 border border-sky-400/30 px-3 py-0.5 rounded-full bg-sky-400/5"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                >
+                  Summary
+                </span>
+                <span
+                  className="text-[0.6rem] tracking-[0.2em] uppercase px-3 py-0.5 rounded-full"
+                  style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    background: 'rgba(99,102,241,0.15)',
+                    color: '#818cf8',
+                    border: '1px solid rgba(99,102,241,0.3)',
+                  }}
+                >
+                  {searchResult.category} Category
+                </span>
+              </div>
+
+              <p
+                className="text-slate-400 leading-relaxed text-sm max-w-4xl"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                {searchResult.summary}
+              </p>
+            </motion.div>
+
+            {/* ── BOX 3: Related Articles ── */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.35 }}
+              className="flex items-center gap-3 mb-4"
+            >
+              <span
+                className="w-2 h-2 rounded-full inline-block"
+                style={{ background: '#818cf8', boxShadow: '0 0 8px #818cf8' }}
+              />
+              <h2
+                className="text-[0.75rem] text-slate-500 tracking-[0.15em] uppercase"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                Related Articles
+              </h2>
+              {searchResult.articles.length > 0 && (
+                <span
+                  className="text-[0.6rem] text-slate-700 ml-1"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                >
+                  ({searchResult.articles.length})
+                </span>
+              )}
+            </motion.div>
+
+            {/* Article cards row */}
+            <div className="flex gap-3 pb-16 overflow-x-auto" style={{ alignItems: 'stretch' }}>
+              {searchResult.articles.length > 0 ? (
+                searchResult.articles.map((article, i) => {
+                  const tagColor = TAG_COLORS[i % TAG_COLORS.length]
+                  return (
+                    <motion.a
+                      key={i}
+                      href={article.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      initial={{ opacity: 0, y: 24 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.45, delay: 0.5 + i * 0.08 }}
+                      className="flex flex-col rounded-2xl p-5 cursor-pointer backdrop-blur-md min-h-[220px]"
+                      style={{
+                        background: 'linear-gradient(160deg, rgba(15,23,42,0.97), rgba(15,23,42,0.8))',
+                        border: '1px solid rgba(56,189,248,0.12)',
+                        flex: '1 1 0',
+                        minWidth: '280px',
+                        textDecoration: 'none',
+                      }}
+                      whileHover={{
+                        borderColor: tagColor + '55',
+                        boxShadow: `0 0 28px ${tagColor}18, 0 8px 32px rgba(0,0,0,0.5)`,
+                        y: -3,
+                      }}
+                    >
+                      {/* Tag + date */}
+                      <div className="flex items-center justify-between mb-3">
+                        <span
+                          className="text-[0.6rem] tracking-widest uppercase px-2 py-0.5 rounded-full"
+                          style={{
+                            background: tagColor + '18',
+                            color: tagColor,
+                            border: `1px solid ${tagColor}44`,
+                            fontFamily: "'IBM Plex Mono', monospace",
+                          }}
+                        >
+                          NEWS
+                        </span>
+                        <span
+                          className="text-[0.6rem] text-slate-600"
+                          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                        >
+                          {article.date}
+                        </span>
+                      </div>
+
+                      {/* Source */}
+                      <p
+                        className="text-[0.65rem] text-slate-600 uppercase tracking-widest mb-2"
+                        style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                      >
+                        {article.source}
+                      </p>
+
+                      {/* Headline */}
+                      <h3
+                        className="text-slate-200 font-bold text-sm leading-snug mb-3 flex-1"
+                        style={{
+                          fontFamily: "'IBM Plex Mono', monospace",
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {article.title}
+                      </h3>
+
+                      {/* Snippet */}
+                      <p
+                        className="text-slate-500 text-xs leading-relaxed"
+                        style={{
+                          fontFamily: "'IBM Plex Mono', monospace",
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {article.snippet}
+                      </p>
+
+                      {/* Read more */}
+                      <div className="mt-4">
+                        <span
+                          className="text-[0.65rem] tracking-widest uppercase"
+                          style={{ color: tagColor, fontFamily: "'IBM Plex Mono', monospace" }}
+                        >
+                          Read More →
+                        </span>
+                      </div>
+                    </motion.a>
+                  )
+                })
+              ) : (
+                <p
+                  className="text-slate-600 text-sm"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                >
+                  No articles found.
+                </p>
+              )}
+            </div>
+          </>
+        )}
 
       </div>
     </div>
