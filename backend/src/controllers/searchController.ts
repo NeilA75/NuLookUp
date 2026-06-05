@@ -49,21 +49,17 @@ export async function searchController(req: Request, res: Response) {
     const query = normalizeQuery(rawQuery);
     const cacheKey = query.toLowerCase();
 
-    const cached = get<SearchResult>(cacheKey);
-    if (cached) {
-      return res.json(cached);
-    }
-
     const category = classifyQuery(query);
     const rawPrices = await fetchPriceTrend(category, query);
     const priceData = aggregatePrices(rawPrices);
     const articles = await getNewsArticles(query);
     const summary = await summarizeQuery(query, priceData, articles.map((article) => article.title));
 
-    const result: SearchResult = {
+    const result = {
       query,
       category,
       avgPrice: priceData.avgPrice,
+      currentPrice: priceData.currentPrice,
       change: priceData.change,
       changePositive: priceData.changePositive,
       low: priceData.low,
@@ -71,7 +67,8 @@ export async function searchController(req: Request, res: Response) {
       trend: priceData.trend,
       summary,
       articles,
-    };
+      backendVersion: '20240605-commodity-fix',
+    } as SearchResult & { backendVersion: string };
 
     set(cacheKey, result);
     return res.json(result);

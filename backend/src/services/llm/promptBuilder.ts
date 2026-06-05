@@ -9,6 +9,7 @@ export function buildSummaryPrompt(
 
   return `You are a financial and market analyst. Given the following data about "${query}":
 - Current average price: ${priceData.avgPrice}
+- Current price: ${priceData.currentPrice}
 - 12-month change: ${priceData.change}
 - Price range: ${priceData.low} – ${priceData.high}
 - Recent headlines:

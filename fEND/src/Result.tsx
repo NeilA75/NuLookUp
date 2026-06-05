@@ -32,6 +32,7 @@ interface SearchResult {
   query: string
   category: string
   avgPrice: string
+  currentPrice: string
   change: string
   changePositive: boolean
   low: string
@@ -311,7 +312,7 @@ export default function Result({ settings }: { settings: Settings }) {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch(`/api/search?q=${encodeURIComponent(formattedQuery)}`)
+        const response = await fetch(`http://localhost:3001/api/search?q=${encodeURIComponent(formattedQuery)}`)
         if (!response.ok) throw new Error('Failed to fetch search result')
         const data: SearchResult = await response.json()
         setSearchResult(data)
@@ -530,6 +531,28 @@ export default function Result({ settings }: { settings: Settings }) {
 
               {/* Right: Average Price + Change */}
               <div className="p-6 flex flex-col justify-center items-start gap-3">
+                <span
+                  className="text-[0.6rem] tracking-[0.2em] uppercase text-slate-600"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                >
+                  Current Price
+                </span>
+
+                <div
+                  className="font-extrabold leading-none"
+                  style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: 'clamp(1.4rem, 2.5vw, 2rem)',
+                    background: 'linear-gradient(135deg, #f97316, #38bdf8)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  {searchResult.currentPrice}
+                </div>
+
+                <div className="w-full h-px bg-sky-400/10" />
+
                 <span
                   className="text-[0.6rem] tracking-[0.2em] uppercase text-slate-600"
                   style={{ fontFamily: "'IBM Plex Mono', monospace" }}

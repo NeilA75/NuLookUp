@@ -9,7 +9,11 @@ export async function summarizeQuery(
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return 'Summary unavailable — add OPENAI_API_KEY to .env to enable AI summaries.';
+    const headlineSnippet = articleHeadlines.length
+      ? `Recent headlines mention ${articleHeadlines.slice(0, 2).join('; ')}.`
+      : 'No recent headlines are available.';
+
+    return `Latest data for ${query} shows a current price of ${priceData.currentPrice}, a 12-month change of ${priceData.change}, and a range of ${priceData.low} to ${priceData.high}. ${headlineSnippet} Add OPENAI_API_KEY to .env to enable AI-generated summaries.`;
   }
 
   try {

@@ -11,7 +11,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'http://localhost:3001'],
     methods: ['GET', 'POST', 'OPTIONS'],
   })
 );
@@ -25,7 +25,7 @@ app.use((req, res, next) => {
 
 app.use('/api', router);
 
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+const port = process.env.PORT ? Number(process.env.PORT) : 3001;
 app.listen(port, () => {
-  console.log(`NuLookUp backend listening on port ${port}`);
+  console.log(`NuLookUp backend listening on port ${port} — reload ${new Date().toISOString()}`);
 });

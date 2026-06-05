@@ -5,6 +5,7 @@ export interface RawPricePoint {
 
 export interface AggregatedPriceData {
   avgPrice: string;
+  currentPrice: string;
   change: string;
   changePositive: boolean;
   low: string;
@@ -29,6 +30,7 @@ export interface SearchResult {
   changePositive: boolean;
   low: string;
   high: string;
+  currentPrice: string;
   trend: { day: string; price: number }[];
   summary: string;
   articles: Article[];

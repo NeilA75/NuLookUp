@@ -38,12 +38,14 @@ export function aggregatePrices(rawPrices: RawPricePoint[]): AggregatedPriceData
   const firstPrice = prices[0] ?? trend[0].price;
   const lastPrice = prices[prices.length - 1] ?? trend[trend.length - 1].price;
   const avgPrice = prices.length ? prices.reduce((sum, value) => sum + value, 0) / prices.length : 0;
-  const lowPrice = prices.length ? Math.min(...prices) : 0;
-  const highPrice = prices.length ? Math.max(...prices) : 0;
+  const lowPrice = prices.length ? Math.min(...prices) : trend[0].price;
+  const highPrice = prices.length ? Math.max(...prices) : trend[0].price;
+  const currentPrice = prices.length ? prices[prices.length - 1] : trend[trend.length - 1].price;
   const change = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
 
   return {
     avgPrice: formatCurrency(avgPrice),
+    currentPrice: formatCurrency(currentPrice),
     change: formatChange(change),
     changePositive: change >= 0,
     low: formatCurrency(lowPrice),

@@ -80,7 +80,7 @@ npm run dev
 Backend will run at:
 
 ```
-http://localhost:5000
+http://localhost:3001
 ```
 
 ---
@@ -90,7 +90,7 @@ http://localhost:5000
 ### 📁 Go to frontend directory
 
 ```bash
-cd ../frontend
+cd ./fEND
 ```
 
 ### 📦 Install frontend dependencies
@@ -108,7 +108,7 @@ npm run dev
 Frontend will run at:
 
 ```
-http://localhost:5173
+http://localhost:5174
 ```
 
 ---
