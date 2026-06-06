@@ -12,6 +12,10 @@ const forexPrice_1 = require("../services/priceSources/forexPrice");
 const commodityPrice_1 = require("../services/priceSources/commodityPrice");
 const carPrice_1 = require("../services/priceSources/carPrice");
 const collectablePrice_1 = require("../services/priceSources/collectablePrice");
+const genericProduct_1 = require("../services/priceSources/genericProduct");
+const amazonProduct_1 = require("../services/priceSources/amazonProduct");
+const realEstate_1 = require("../services/priceSources/realEstate");
+const laborService_1 = require("../services/priceSources/laborService");
 const sources_1 = require("../types/sources");
 function normalizeQuery(value) {
     return value
@@ -35,10 +39,27 @@ async function fetchPriceTrend(category, query) {
             return (0, carPrice_1.getCarPrices)(query);
         case sources_1.ItemCategory.COLLECTABLE:
             return (0, collectablePrice_1.getCollectablePrices)(query);
+        case sources_1.ItemCategory.AMAZON_PRODUCT:
+            return (0, amazonProduct_1.getAmazonProductPrices)(query);
+        case sources_1.ItemCategory.REAL_ESTATE:
+            return (0, realEstate_1.getRealEstatePrices)(query);
+        case sources_1.ItemCategory.LABOR_SERVICE:
+            return (0, laborService_1.getLaborServicePrices)(query);
+        case sources_1.ItemCategory.ELECTRONICS:
+        case sources_1.ItemCategory.BOOKS:
+        case sources_1.ItemCategory.FURNITURE:
+        case sources_1.ItemCategory.JEWELRY:
         case sources_1.ItemCategory.CLOTHING:
+        case sources_1.ItemCategory.SPORTS_GEAR:
+        case sources_1.ItemCategory.APPLIANCES:
+        case sources_1.ItemCategory.VIDEOGAMES:
+        case sources_1.ItemCategory.ARTWORK:
+            // All consumer products route through generic scraper with fallback
+            return (0, genericProduct_1.getGenericProductPrices)(query);
         case sources_1.ItemCategory.GENERAL:
         default:
-            return [];
+            // Try generic product scraper as fallback for unknown items
+            return (0, genericProduct_1.getGenericProductPrices)(query);
     }
 }
 async function searchController(req, res) {
@@ -46,12 +67,18 @@ async function searchController(req, res) {
         const rawQuery = String(req.query.q || '');
         const query = normalizeQuery(rawQuery);
         const cacheKey = query.toLowerCase();
+        // Check cache first
         const cached = (0, cache_1.get)(cacheKey);
         if (cached) {
             return res.json(cached);
         }
         const category = (0, classifier_1.classifyQuery)(query);
-        const rawPrices = await fetchPriceTrend(category, query);
+        let rawPrices = await fetchPriceTrend(category, query);
+        // Smart fallback: if no data from specific source, try generic product scraper
+        if (rawPrices.length === 0 && category !== sources_1.ItemCategory.GENERAL) {
+            console.log(`No data from ${category}, trying generic product scraper for: ${query}`);
+            rawPrices = await (0, genericProduct_1.getGenericProductPrices)(query);
+        }
         const priceData = (0, priceAggregator_1.aggregatePrices)(rawPrices);
         const articles = await (0, newsAggregator_1.getNewsArticles)(query);
         const summary = await (0, summarizer_1.summarizeQuery)(query, priceData, articles.map((article) => article.title));
@@ -59,6 +86,7 @@ async function searchController(req, res) {
             query,
             category,
             avgPrice: priceData.avgPrice,
+            currentPrice: priceData.currentPrice,
             change: priceData.change,
             changePositive: priceData.changePositive,
             low: priceData.low,
@@ -66,6 +94,8 @@ async function searchController(req, res) {
             trend: priceData.trend,
             summary,
             articles,
+            dataQuality: rawPrices.length > 0 ? 'high' : 'low',
+            backendVersion: '20260605-universal-search',
         };
         (0, cache_1.set)(cacheKey, result);
         return res.json(result);

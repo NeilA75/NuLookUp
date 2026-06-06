@@ -34,7 +34,7 @@ async function getCryptoPrices(query) {
         const response = await axios_1.default.get(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}/market_chart`, {
             params: {
                 vs_currency: 'usd',
-                days: 365,
+                days: 'max',
                 interval: 'monthly',
             },
             timeout: 20000,
@@ -44,8 +44,8 @@ async function getCryptoPrices(query) {
             .map((row) => ({
             month: new Date(row[0]).toLocaleString('en-US', { month: 'short' }),
             price: Number(row[1] ?? 0),
-        }))
-            .slice(-12);
+            date: new Date(row[0]).toISOString(),
+        }));
         return trend;
     }
     catch (error) {

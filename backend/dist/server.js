@@ -12,7 +12,7 @@ const router_1 = __importDefault(require("./router"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'http://localhost:3001'],
     methods: ['GET', 'POST', 'OPTIONS'],
 }));
 app.use((0, helmet_1.default)());
@@ -23,7 +23,11 @@ app.use((req, res, next) => {
     next();
 });
 app.use('/api', router_1.default);
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+const port = process.env.BACKEND_PORT
+    ? Number(process.env.BACKEND_PORT)
+    : process.env.PORT
+        ? Number(process.env.PORT)
+        : 3001;
 app.listen(port, () => {
-    console.log(`NuLookUp backend listening on port ${port}`);
+    console.log(`NuLookUp backend listening on port ${port} — reload ${new Date().toISOString()}`);
 });

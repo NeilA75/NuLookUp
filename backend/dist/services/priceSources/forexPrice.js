@@ -19,8 +19,9 @@ function buildMonthlyPoints(rates, months) {
         .map(([date, value]) => ({
         month: new Date(date).toLocaleString('en-US', { month: 'short' }),
         price: value,
+        date: new Date(date).toISOString(),
     }))
-        .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     if (entries.length >= 12) {
         return entries.slice(-12);
     }
